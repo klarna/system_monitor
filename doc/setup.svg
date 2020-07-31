@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="330px" preserveAspectRatio="none" style="width:653px;height:330px;" version="1.1" viewBox="0 0 653 330" width="653px" zoomAndPan="magnify"><defs><filter height="300%" id="f3745fmqxtqbh" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--cluster Business network--><polygon fill="#FFFFFF" filter="url(#f3745fmqxtqbh)" points="14,16.5,162,16.5,169,38.7969,172,38.7969,172,270,14,270,14,16.5" style="stroke: #000000; stroke-width: 1.5;"/><line style="stroke: #000000; stroke-width: 1.5;" x1="14" x2="169" y1="38.7969" y2="38.7969"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="142" x="18" y="31.4951">Business network</text><!--cluster Monitoring network--><polygon fill="#FFFFFF" filter="url(#f3745fmqxtqbh)" points="185,141,346,141,353,163.2969,631,163.2969,631,318,185,318,185,141" style="stroke: #000000; stroke-width: 1.5;"/><line style="stroke: #000000; stroke-width: 1.5;" x1="185" x2="353" y1="163.2969" y2="163.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="155" x="189" y="155.9951">Monitoring network</text><!--entity node1--><polygon fill="#FEFECE" filter="url(#f3745fmqxtqbh)" points="75.5,53.5,85.5,43.5,160.5,43.5,160.5,79.7969,150.5,89.7969,75.5,89.7969,75.5,53.5" style="stroke: #000000; stroke-width: 1.5;"/><line style="stroke: #000000; stroke-width: 1.5;" x1="150.5" x2="159.5" y1="53.5" y2="44.5"/><line style="stroke: #000000; stroke-width: 1.5;" x1="75.5" x2="150.5" y1="53.5" y2="53.5"/><line style="stroke: #000000; stroke-width: 1.5;" x1="150.5" x2="150.5" y1="53.5" y2="89.7969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="45" x="90.5" y="76.4951">node1</text><!--entity node2--><polygon fill="#FEFECE" filter="url(#f3745fmqxtqbh)" points="72.5,226,82.5,216,157.5,216,157.5,252.2969,147.5,262.2969,72.5,262.2969,72.5,226" style="stroke: #000000; stroke-width: 1.5;"/><line style="stroke: #000000; stroke-width: 1.5;" x1="147.5" x2="156.5" y1="226" y2="217"/><line style="stroke: #000000; stroke-width: 1.5;" x1="72.5" x2="147.5" y1="226" y2="226"/><line style="stroke: #000000; stroke-width: 1.5;" x1="147.5" x2="147.5" y1="226" y2="262.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="45" x="87.5" y="248.9951">node2</text><!--entity kafka--><path d="M198,226 L244,226 C249,226 249,239.1484 249,239.1484 C249,239.1484 249,252.2969 244,252.2969 L198,252.2969 C193,252.2969 193,239.1484 193,239.1484 C193,239.1484 193,226 198,226 " fill="#FEFECE" filter="url(#f3745fmqxtqbh)" style="stroke: #A80036; stroke-width: 1.5;"/><path d="M244,226 C239,226 239,239.1484 239,239.1484 C239,252.2969 244,252.2969 244,252.2969 " fill="none" style="stroke: #A80036; stroke-width: 1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="36" x="198" y="243.9951">kafka</text><!--entity kflow--><polygon fill="#FEFECE" filter="url(#f3745fmqxtqbh)" points="284.5,226,294.5,216,359.5,216,359.5,252.2969,349.5,262.2969,284.5,262.2969,284.5,226" style="stroke: #000000; stroke-width: 1.5;"/><line style="stroke: #000000; stroke-width: 1.5;" x1="349.5" x2="358.5" y1="226" y2="217"/><line style="stroke: #000000; stroke-width: 1.5;" x1="284.5" x2="349.5" y1="226" y2="226"/><line style="stroke: #000000; stroke-width: 1.5;" x1="349.5" x2="349.5" y1="226" y2="262.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="35" x="299.5" y="248.9951">kflow</text><!--entity db--><path d="M394.5,178 C394.5,168 445,168 445,168 C445,168 495.5,168 495.5,178 L495.5,300.4844 C495.5,310.4844 445,310.4844 445,310.4844 C445,310.4844 394.5,310.4844 394.5,300.4844 L394.5,178 " fill="#FEFECE" filter="url(#f3745fmqxtqbh)" style="stroke: #000000; stroke-width: 1.5;"/><path d="M394.5,178 C394.5,188 445,188 445,188 C445,188 495.5,188 495.5,178 " fill="none" style="stroke: #000000; stroke-width: 1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="62" x="404.5" y="204.9951">Postgres</text><path d="M394.5,203.2969 C394.5,213.2969 445,213.2969 445,213.2969 C445,213.2969 495.5,213.2969 495.5,203.2969 " fill="none" style="stroke: #000000; stroke-width: 1.0;"/><path d="M394.5,205.2969 C394.5,215.2969 445,215.2969 445,215.2969 C445,215.2969 495.5,215.2969 495.5,205.2969 " fill="none" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="69" x="410.5" y="225.292">node_role</text><path d="M394.5,227.5938 C394.5,237.5938 445,237.5938 445,237.5938 C445,237.5938 495.5,237.5938 495.5,227.5938 " fill="none" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="22" x="410.5" y="249.5889">prc</text><path d="M394.5,251.8906 C394.5,261.8906 445,261.8906 445,261.8906 C445,261.8906 495.5,261.8906 495.5,251.8906 " fill="none" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="56" x="410.5" y="273.8857">app_top</text><path d="M394.5,276.1875 C394.5,286.1875 445,286.1875 445,286.1875 C445,286.1875 495.5,286.1875 495.5,276.1875 " fill="none" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="52" x="410.5" y="298.1826">fun_tup</text><!--entity Grafana--><polygon fill="#FEFECE" filter="url(#f3745fmqxtqbh)" points="530.5,226,540.5,216,623.5,216,623.5,252.2969,613.5,262.2969,530.5,262.2969,530.5,226" style="stroke: #000000; stroke-width: 1.5;"/><line style="stroke: #000000; stroke-width: 1.5;" x1="613.5" x2="622.5" y1="226" y2="217"/><line style="stroke: #000000; stroke-width: 1.5;" x1="530.5" x2="613.5" y1="226" y2="226"/><line style="stroke: #000000; stroke-width: 1.5;" x1="613.5" x2="613.5" y1="226" y2="262.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="53" x="545.5" y="248.9951">Grafana</text><!--entity user--><ellipse cx="577" cy="35" fill="#FEFECE" filter="url(#f3745fmqxtqbh)" rx="8" ry="8" style="stroke: #A80036; stroke-width: 2.0;"/><path d="M577,43 L577,70 M564,51 L590,51 M577,70 L564,85 M577,70 L590,85 " fill="none" filter="url(#f3745fmqxtqbh)" style="stroke: #A80036; stroke-width: 2.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="31" x="561.5" y="104.9951">user</text><!--link node1 to node2--><!--link node1 to kafka--><path d="M140.326,89.6098 C153.0886,103.6675 168.7438,122.4396 180,141 C195.8696,167.1675 208.3924,200.5869 215.2395,220.8626 " fill="none" id="node1-kafka" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="216.8565,225.7219,217.81,215.9193,215.2777,220.9777,210.2193,218.4454,216.8565,225.7219" style="stroke: #A80036; stroke-width: 1.0;"/><!--link node2 to kafka--><path d="M157.6484,239 C167.6232,239 177.5979,239 187.5726,239 " fill="none" id="node2-kafka" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="192.7888,239,183.7888,235,187.7888,239,183.7888,243,192.7888,239" style="stroke: #A80036; stroke-width: 1.0;"/><!--link kafka to kflow--><path d="M249.0117,239 C259.047,239 269.0823,239 279.1176,239 " fill="none" id="kafka-kflow" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="284.3654,239,275.3654,235,279.3654,239,275.3654,243,284.3654,239" style="stroke: #A80036; stroke-width: 1.0;"/><!--link kflow to db--><path d="M359.957,239 C369.6695,239 379.382,239 389.0945,239 " fill="none" id="kflow-db" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="394.1735,239,385.1735,235,389.1735,239,385.1735,243,394.1735,239" style="stroke: #A80036; stroke-width: 1.0;"/><!--link user to Grafana--><path d="M577,108.2574 C577,141.9596 577,188.1428 577,215.6406 " fill="none" id="user-Grafana" style="stroke: #A80036; stroke-width: 1.0;"/><!--link db to Grafana--><path d="M495.5313,239 C505.3775,239 515.2238,239 525.0701,239 " fill="none" id="db-Grafana" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="530.2191,239,521.2191,235,525.2191,239,521.2191,243,530.2191,239" style="stroke: #A80036; stroke-width: 1.0;"/><!--
+@startuml
+
+folder "Business network" {
+  node node1
+
+  node node2
+
+  node1 -[hidden]-> node2
+}
+
+folder "Monitoring network" {
+  queue kafka
+
+  node kflow
+
+  database db [ Postgres
+  ===
+  node_role
+  - - -
+  prc
+  - - -
+  app_top
+  - - -
+  fun_tup
+  ]
+
+  node Grafana
+}
+
+actor user
+
+node1 -> kafka
+node2 -> kafka
+kafka -> kflow
+kflow -> db
+
+user - - Grafana
+db -> Grafana
+
+@enduml
+
+PlantUML version 1.2018.13(Mon Nov 26 18:11:51 CET 2018)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 11.0.7+10-post-Ubuntu-2ubuntu219.10
+Operating System: Linux
+OS Version: 5.3.0-62-generic
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

@@ -1,47 +1,139 @@
 # Project Name
-> Short blurb about what your project does.
+> Erlang telemetry collector
 
 [![Build Status][ci-image]][ci-url]
 [![License][license-image]][license-url]
 [![Developed at Klarna][klarna-image]][klarna-url]
 
+`system_monitor` is a BEAM VM monitoring and introspection application
+that helps troubleshooting live systems. It collects various
+information about Erlang processes and applications, and streams that
+data to Kafka. Unlike `observer`, `system_monitor` does not require
+connecting to the monitored system via Erlang distribution protocol,
+and can be used to monitor systems with very tight access
+restrictions.
 
-One to two paragraph statement about your project and what it does.
+## Features
 
-## First steps
+### Process top
 
-<details>
- <summary>Installation (for Admins)</summary>
-  
-  Currently, new repositories can be created only by a Klarna Open Source community lead. Please reach out to us if you need assistance.
-  
-  1. Create a new repository by clicking ‘Use this template’ button.
-  
-  2. Make sure your newly created repository is private.
-  
-  3. Enable Dependabot alerts in your candidate repo settings under Security & analysis. You need to enable ‘Allow GitHub to perform read-only analysis of this repository’ first.
-</details>
+Information about top N Erlang processes consuming the most resources
+(such as reductions or memory), or have the longest message queues, is
+presented on process top dashboard:
 
-1. Update `README.md` and `CHANGELOG.md`.
+![Process top](doc/proc_top.png)
 
-2. Optionally, change `.github/CONTRIBUTING.md`.
+Historical data can be accessed via standard Grafana time
+picker. `status` panel can display important information about the
+node state. Pids of the processes on that dashboard are clickable
+links that lead to the process history dashboard.
 
-3. Do *not* edit `LICENSE`, `.github/CODE_OF_CONDUCT.md`, and `.github/SECURITY.md`.
+### Process history
+![Process history](doc/proc_history.png)
+
+Process history dashboard displays time series data about certain
+Erlang process. Note that some data points can be missing if the
+process didn't consume enough resources to appear in the process top.
+
+### Application top
+![Application top](doc/app_top.png)
+
+Application top dashboard contains various information aggregated per
+OTP application.
 
 ## Usage example
 
-A few motivating and useful examples of how your project can be used. Spice this up with code blocks and potentially more screenshots.
+In order to integrate `system_monitor` into your system, simply add it
+to the release apps. Add the following lines to `rebar.config`:
 
-_For more examples and usage, please refer to the [Docs](TODO)._
+```erlang
+{deps, [..., system_monitor]}.
+
+{relx,
+ [ {release, {my_release, "1.0.0"},
+    [kernel, sasl, ..., system_monitor]}
+ ]}.
+```
+
+Add the following configuration to `sys.config` to enable export of
+telemetry to Kafka:
+
+```erlang
+{system_monitor,
+   [ {kafka_hosts, [{"localhost", 9094}]}
+   , {kafka_topic, <<"system_monitor">>}
+   , {kafka_client_config,
+      [ {sasl, {plain, "path-to-kafka-credentials"}}
+      , {ssl, true}
+      ]}
+   ]}
+```
+
+### Custom node status
+
+`system_monitor` can export arbitrary node status information that is
+deemed important for the operator. This is done by defining a callback
+function that returns an HTML-formatted string (or iolist):
+
+```erlang
+-module(foo).
+
+-export([node_status/0]).
+
+node_status() ->
+  ["my node type<br/>",
+   case healthy() of
+     true  -> "<font color=#0f0>UP</font><br/>"
+     false -> "<mark>DEGRADED</mark><br/>"
+   end,
+   io_lib:format("very important value=~p", [very_important_value()])
+  ].
+```
+
+This callback then needs to be added to the system_monitor application
+environment:
+
+```erlang
+{system_monitor,
+   [ {node_status_fun, {foo, node_status}}
+   ...
+   ]}
+```
+
+More information about configurable options is found [here](src/system_monitor.app.src).
+
+## Collection of data
+
+![deployment diagram](doc/setup.svg)
+
+On the receiving side Kafka messages are picked up by
+[kflow](https://github.com/klarna-incubator/kflow) and stored in
+Postgres. Finally, [Grafana](https://grafana.com/) with postgres
+datasource presents the data.
+
+### Kflow
+An example of [Kflow](https://github.com/klarna-incubator/kflow) configuration for processing `system_monitor` data can be found [here](https://github.com/klarna-incubator/kflow/blob/master/config/kflow_config.erl).
+
+### Database
+[Here](https://github.com/klarna-incubator/kflow/blob/master/test/kflow_sysmon_receiver_SUITE_data/db/20-schema.sql) one can find the required database schema.
+
+### Grafana
+
+Grafana dashboard templates are found [here](https://github.com/klarna-incubator/kflow/tree/master/test/kflow_sysmon_receiver_SUITE_data/grafana/dashboards).
 
 ## Development setup
 
-Describe how to install all development dependencies and how to run an automated test-suite of some kind. Potentially do this for multiple platforms.
+A toy dockerized demo is maintained as part of [kflow](https://github.com/klarna-incubator/kflow), it requires `erlang`, `docker`, `docker-compose` and `pwgen` to run. One can launch it like this:
 
 ```sh
-make install
-npm test
+git clone https://github.com/klarna-incubator/kflow
+cd kflow
+make run
 ```
+
+After the services come up, all grafana dashboards will be availiable
+at http://localhost:3000/ with default login "admin" and password
+"admin".
 
 ## How to contribute
 

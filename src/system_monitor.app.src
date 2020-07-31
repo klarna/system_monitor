@@ -1,0 +1,75 @@
+%% -*- mode: erlang -*-
+%%--------------------------------------------------------------------------------
+%% Copyright 2020 Klarna Bank AB
+%%
+%% Licensed under the Apache License, Version 2.0 (the "License");
+%% you may not use this file except in compliance with the License.
+%% You may obtain a copy of the License at
+%%
+%%     http://www.apache.org/licenses/LICENSE-2.0
+%%
+%% Unless required by applicable law or agreed to in writing, software
+%% distributed under the License is distributed on an "AS IS" BASIS,
+%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%% See the License for the specific language governing permissions and
+%% limitations under the License.
+%%--------------------------------------------------------------------------------
+{application, system_monitor,
+ [ {description,  "Monitoring app that exports Erlang VM introspection data to Kafka"}
+ , {vsn,          "0.3.0"}
+ , {registered,   []}
+ , {modules,      []}
+ , {mod,          {system_monitor_app, []}}
+ , {applications, [kernel, stdlib, kafka_protocol, supervisor3, brod]}
+ , {env,
+    [ %% Specifies how many topmost processes should be reported per
+      %% catergory (such as `top_memory', `top_reductions', etc.)
+      {top_num_items, 10}
+      %% Specifies how often process top should be collected (in ms):
+    , {top_sample_interval, 2000}
+      %% Specifies sample size for the approximate metrics, such as
+      %% 'percentage of processes started by an app', and 'percentage
+      %% of processes running a function':
+    , {top_sample_size, 3000}
+      %% Stop reporting exact process data when the number of
+      %% processes is above this threshold, in order to avoid
+      %% hammering the VM with introspection BIFs (this doesn't affect
+      %% approximate monitors that rely on sampling):
+    , {top_max_procs, 15000}
+      %% By default system_monitor tries to collect process dictionary
+      %% of the topmost processes in order to determine start function
+      %% more precisely. In theory this can cause problems if process
+      %% dictionary contains very large amounts of data. This option
+      %% allows to fallback to safety:
+    , {collect_process_dictionary, true}
+      %% Don't report values to `app_top' and `fun_top' below the
+      %% threshold as insignificant:
+    , {top_significance_threshold,
+       #{ current_function => 0.01 % 1 percent
+        , initial_call     => 0.01 % 1 percent
+        , processes        => 100  % number of processes
+        , reductions       => 0.01 % 1 percent
+        , memory           => 10000 % words
+        }}
+
+      %% Specify node-specific healthcheck function as `{module(),
+      %% function()}', for example: `{my_app, node_status}'. This
+      %% function should return an HTML-formatted status report:
+    , {node_status_fun, undefined}
+      %% List of additional status check functions:
+    , {status_checks, []}
+
+      %% Kafka topic where the data will end up:
+    , {kafka_hosts, []}
+    , {kafka_topic, <<"system_monitor">>}
+    , {kafka_client_config, [{ssl, true}]}
+
+      %% BEAM event settings:
+    , {beam_events,
+       [ busy_port
+       , busy_dist_port
+       , {long_gc, 500}
+       , {long_schedule, 500}
+       ]}
+    ]}
+ ]}.
