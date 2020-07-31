@@ -1,0 +1,16 @@
+{"1.1.0",
+[{<<"brod">>,{pkg,<<"brod">>,<<"3.7.0">>},0},
+ {<<"crc32cer">>,{pkg,<<"crc32cer">>,<<"0.1.3">>},2},
+ {<<"hut">>,{pkg,<<"hut">>,<<"1.3.0">>},0},
+ {<<"kafka_protocol">>,{pkg,<<"kafka_protocol">>,<<"2.1.2">>},1},
+ {<<"snappyer">>,{pkg,<<"snappyer">>,<<"1.2.4">>},2},
+ {<<"supervisor3">>,{pkg,<<"supervisor3">>,<<"1.1.9">>},0}]}.
+[
+{pkg_hash,[
+ {<<"brod">>, <<"9B2CBD258217CE2AF4B57317333C13D8068410C564D3488D31587A6969C58CD3">>},
+ {<<"crc32cer">>, <<"8984906C4B4FAE6AA292C48F286A1C83B19AD44BD102287ACB94D696015967CE">>},
+ {<<"hut">>, <<"71F2F054E657C03F959CF1ACC43F436EA87580696528CA2A55C8AFB1B06C85E7">>},
+ {<<"kafka_protocol">>, <<"9D4FB9281F8562206ADED3A7A45FC93F3A4389AFEF9EFE6D9C4CF5A705292BCF">>},
+ {<<"snappyer">>, <<"6D739C534CD2339633127A2B40279BE71F149E5842C5363A4D88E66EFB7C1FEC">>},
+ {<<"supervisor3">>, <<"F1A3CC12FB6197526F548E79C9FE2B4AF0C74EFB8A687917B3B1EBE5E9C9368D">>}]}
+].
