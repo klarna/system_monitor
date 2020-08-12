@@ -1,4 +1,4 @@
-# Project Name
+# system_monitor
 > Erlang telemetry collector
 
 [![Build Status][ci-image]][ci-url]
