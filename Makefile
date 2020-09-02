@@ -10,3 +10,11 @@ doc/%.png: doc/%.uml
 .PHONY: doc
 doc: $(PICS)
 	rebar3 edoc
+
+.PHONY: clean
+clean:
+	rm -rf _build
+
+.PHONY: hex-publish
+hex-publish: clean
+	rebar3 as dev hex publish
