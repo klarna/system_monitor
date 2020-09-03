@@ -62,7 +62,7 @@
              }               :: function_top()
         }).
 
--type top() :: {integer(), gb_tree:tree(integer(), [#pid_info{}])}.
+-type top() :: {integer(), gb_trees:tree(integer(), [#pid_info{}])}.
 
 -define(PROCESS_INFO_FIELDS,
         [ group_leader, reductions, memory, message_queue_len]).
@@ -614,6 +614,12 @@ initial_call(Info)  ->
 %%%===================================================================
 
 -ifdef(TEST).
+
+-dialyzer({nowarn_function, [ maybe_push_to_top_test/0
+                            , maybe_push_to_top_same_as_sort_prop/0
+                            , initial_call_test/0
+                            , initial_call_fallback_test/0
+                            ]}).
 
 maybe_push_to_top_wrapper(Val, Top) ->
   Init = sort_top(1, Top),
