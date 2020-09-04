@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-18.04]
-        otp-version: [21.3.8.17-1]
+        otp-version: [21.3.8.17-1, 22.3.4.7-1]
     runs-on: ${{ matrix.platform }}
     steps:
     - name: Prepare the environment
