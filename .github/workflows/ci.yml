@@ -1,0 +1,28 @@
+name: Build
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - master
+jobs:
+  build:
+    strategy:
+      matrix:
+        platform: [ubuntu-18.04]
+        otp-version: [21.3.8.17-1]
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - name: Prepare the environment
+      run: |
+        deb=esl-erlang_${{ matrix.otp-version }}~ubuntu~bionic_amd64.deb
+        wget https://packages.erlang-solutions.com/erlang/debian/pool/${deb}
+        sudo apt-get install --allow-downgrades --no-install-recommends ./${deb}
+        wget https://github.com/erlang/rebar3/releases/download/3.14.0/rebar3
+        chmod +x rebar3
+        sudo mv rebar3 /usr/local/bin/rebar3
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Compile
+      run: make test
