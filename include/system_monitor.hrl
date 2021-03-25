@@ -40,14 +40,14 @@
         , dreductions         :: integer()
         , dmemory             :: integer()
         , reductions          :: integer()
-        , memory              :: integer()
+        , memory              :: integer() %% bytes
         , message_queue_len   :: integer()
         , current_function    :: mfa()
         , initial_call        :: mfa()
         , registered_name     :: atom()
         , stack_size          :: integer()
-        , heap_size           :: integer()
-        , total_heap_size     :: integer()
+        , heap_size           :: integer() %% words
+        , total_heap_size     :: integer() %% words
         , current_stacktrace  :: list()
         , group_leader        :: list()
         }).

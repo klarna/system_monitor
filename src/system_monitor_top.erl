@@ -30,7 +30,7 @@
 %% API
 -export([start_link/0, get_app_top/0, get_abs_app_top/0,
          get_app_memory/0, get_app_processes/0,
-         get_function_top/0, get_proc_top/0]).
+         get_function_top/0, get_proc_top/0, get_proc_top/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -85,6 +85,16 @@
 get_proc_top() ->
   {ok, Data} = gen_server:call(?SERVER, get_proc_top, infinity),
   Data.
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Get Erlang process top info for one process
+%% @end
+%%--------------------------------------------------------------------
+-spec get_proc_top(pid()) -> #erl_top{} | false.
+get_proc_top(Pid) ->
+  gen_server:call(?SERVER, {get_proc_top, Pid}, infinity).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -169,6 +179,9 @@ handle_call(get_proc_top, _From, State) ->
   SnapshotTS = State#state.last_ts,
   Data = {SnapshotTS, Top},
   {reply, {ok, Data}, State};
+handle_call({get_proc_top, Pid}, _From, State) ->
+  Top = State#state.proc_top,
+  {reply, lists:keyfind(pid_to_list(Pid), #erl_top.pid, Top), State};
 handle_call(get_app_top, _From, State) ->
   Data = State#state.app_top,
   {reply, {ok, Data}, State};

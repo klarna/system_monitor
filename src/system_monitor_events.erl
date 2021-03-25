@@ -58,10 +58,11 @@ handle_cast(_Msg, State) ->
   {noreply, State}.
 
 handle_info({monitor, PidOrPort, EventKind, Info}, State) ->
+  ReferenceData = data_for_reference(PidOrPort),
   InfoTxt = format_system_event_info(Info),
   ?log( info
-      , "sysmon ~p: pid=~p~n~s"
-      , [EventKind, PidOrPort, InfoTxt]
+      , "sysmon type=~p reference=~p~n~s~n~s"
+      , [EventKind, PidOrPort, InfoTxt, ReferenceData]
       , #{domain => [system_monitor]}
       ),
   {noreply, State};
@@ -84,6 +85,14 @@ setup_system_monitor() ->
   {ok, Opts} = application:get_env(?APP, beam_events),
   erlang:system_monitor(self(), Opts),
   ok.
+
+data_for_reference(Pid) when is_pid(Pid) ->
+  case system_monitor_top:get_proc_top(Pid) of
+    false -> "Proc not in top";
+    ProcErlTop -> system_monitor:erl_top_to_str(ProcErlTop)
+  end;
+data_for_reference(_Port) ->
+  "".
 
 -spec format_system_event_info(term()) -> io_lib:chars().
 format_system_event_info(Info) when is_list(Info) ->

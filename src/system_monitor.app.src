@@ -72,5 +72,8 @@
        , {long_gc, 500}
        , {long_schedule, 500}
        ]}
+    , {suspect_procs_max_memory, 524288000} %% 500 MB
+    , {suspect_procs_max_message_queue_len, 5000}
+    , {suspect_procs_max_total_heap_size, 524288000} %% 500 MB
     ]}
  ]}.
