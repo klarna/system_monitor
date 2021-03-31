@@ -403,48 +403,52 @@ do_proc_top(Deltas, State, Now) ->
 finalize_proc_info(#pid_info{pid = Pid, group_leader = GL} = ProcInfo, Now) ->
   ProcessInfo = process_info(Pid, ?ADDITIONAL_FIELDS ++ maybe_dictionary()),
   case ProcessInfo of
-    [ {initial_call, _IC}
-    , {registered_name, Name}
-    , {stack_size, Stack}
-    , {heap_size, Heap}
-    , {total_heap_size, Total}
-    , {current_stacktrace, Stacktrace}
-    | _] ->
-      [{CurrModule, CurrFun, CurrArity, _} |_] = Stacktrace,
-      #erl_top{ node                = node()
-              , ts                  = Now
-              , pid                 = pid_to_list(ProcInfo#pid_info.pid)
-              , group_leader        = pid_to_list(GL)
-              , dreductions         = ProcInfo#pid_info.dreductions
-              , dmemory             = ProcInfo#pid_info.dmemory
-              , reductions          = ProcInfo#pid_info.reductions
-              , memory              = ProcInfo#pid_info.memory
-              , message_queue_len   = ProcInfo#pid_info.message_queue_len
-              , initial_call        = initial_call(ProcessInfo)
-              , registered_name     = Name
-              , stack_size          = Stack
-              , heap_size           = Heap
-              , total_heap_size     = Total
-              , current_stacktrace  = Stacktrace
-              , current_function    = {CurrModule, CurrFun, CurrArity}
-              };
+    [{initial_call, _IC},
+     {registered_name, Name},
+     {stack_size, Stack},
+     {heap_size, Heap},
+     {total_heap_size, Total},
+     {current_stacktrace, Stacktrace}
+     | _] ->
+      CurrentFunction =
+        case Stacktrace of
+          [] ->
+            {unknown, unknown, 0};
+          [{CurrModule, CurrFun, CurrArity, _} | _] ->
+            {CurrModule, CurrFun, CurrArity}
+        end,
+      #erl_top{node = node(),
+               ts = Now,
+               pid = pid_to_list(ProcInfo#pid_info.pid),
+               group_leader = pid_to_list(GL),
+               dreductions = ProcInfo#pid_info.dreductions,
+               dmemory = ProcInfo#pid_info.dmemory,
+               reductions = ProcInfo#pid_info.reductions,
+               memory = ProcInfo#pid_info.memory,
+               message_queue_len = ProcInfo#pid_info.message_queue_len,
+               initial_call = initial_call(ProcessInfo),
+               registered_name = Name,
+               stack_size = Stack,
+               heap_size = Heap,
+               total_heap_size = Total,
+               current_stacktrace = Stacktrace,
+               current_function = CurrentFunction};
     undefined ->
-      #erl_top{ node                = node()
-              , ts                  = Now
-              , pid                 = pid_to_list(ProcInfo#pid_info.pid)
-              , group_leader        = pid_to_list(GL)
-              , dreductions         = ProcInfo#pid_info.dreductions
-              , dmemory             = ProcInfo#pid_info.dmemory
-              , reductions          = ProcInfo#pid_info.reductions
-              , memory              = ProcInfo#pid_info.memory
-              , message_queue_len   = ProcInfo#pid_info.message_queue_len
-              , initial_call        = {unknown, unknown, 0}
-              , current_function    = {unknown, unknown, 0}
-              , stack_size          = 0
-              , heap_size           = 0
-              , total_heap_size     = 0
-              , current_stacktrace  = []
-              }
+      #erl_top{node = node(),
+               ts = Now,
+               pid = pid_to_list(ProcInfo#pid_info.pid),
+               group_leader = pid_to_list(GL),
+               dreductions = ProcInfo#pid_info.dreductions,
+               dmemory = ProcInfo#pid_info.dmemory,
+               reductions = ProcInfo#pid_info.reductions,
+               memory = ProcInfo#pid_info.memory,
+               message_queue_len = ProcInfo#pid_info.message_queue_len,
+               initial_call = {unknown, unknown, 0},
+               current_function = {unknown, unknown, 0},
+               stack_size = 0,
+               heap_size = 0,
+               total_heap_size = 0,
+               current_stacktrace = []}
   end.
 
 -spec maybe_push_to_top(integer(), #pid_info{}, top()) -> top().

@@ -96,39 +96,6 @@ environment:
 
 More information about configurable options is found [here](src/system_monitor.app.src).
 
-## Collection of data
-
-![deployment diagram](doc/setup.svg)
-
-On the receiving side Kafka messages are picked up by
-[kflow](https://github.com/klarna-incubator/kflow) and stored in
-Postgres. Finally, [Grafana](https://grafana.com/) with postgres
-datasource presents the data.
-
-### Kflow
-An example of [Kflow](https://github.com/klarna-incubator/kflow) configuration for processing `system_monitor` data can be found [here](https://github.com/klarna-incubator/kflow/blob/master/config/kflow_config.erl).
-
-### Database
-[Here](https://github.com/klarna-incubator/kflow/blob/master/test/kflow_sysmon_receiver_SUITE_data/db/20-schema.sql) one can find the required database schema.
-
-### Grafana
-
-Grafana dashboard templates are found [here](https://github.com/klarna-incubator/kflow/tree/master/test/kflow_sysmon_receiver_SUITE_data/grafana/dashboards).
-
-## Development setup
-
-A toy dockerized demo is maintained as part of [kflow](https://github.com/klarna-incubator/kflow), it requires `erlang`, `docker`, `docker-compose` and `pwgen` to run. One can launch it like this:
-
-```sh
-git clone https://github.com/klarna-incubator/kflow
-cd kflow
-make run
-```
-
-After the services come up, all grafana dashboards will be availiable
-at http://localhost:3000/ with default login "admin" and password
-"admin".
-
 ## How to contribute
 
 See our guide on [contributing](.github/CONTRIBUTING.md).
