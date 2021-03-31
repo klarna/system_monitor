@@ -52,26 +52,27 @@ post_init(_) ->
     ignore.
 
 init(?SERVER) ->
-    %% The top level supervisor *does not allow restarts*; if a component
-    %% directly under this supervisor crashes, the entire node will shut
-    %% down and restart. Thus, only those components that must never be
-    %% unavailable should be directly under this supervisor.
+  %% The top level supervisor *does not allow restarts*; if a component
+  %% directly under this supervisor crashes, the entire node will shut
+  %% down and restart. Thus, only those components that must never be
+  %% unavailable should be directly under this supervisor.
+  SecondSup =
+    {?SUP2,
+     {supervisor3, start_link, [{local, ?SUP2}, ?MODULE, ?SUP2]},
+     permanent,
+     2000,
+     supervisor,
+     [?MODULE]},
 
-    SecondSup = {?SUP2,
-                 {supervisor3, start_link,
-                  [{local, ?SUP2}, ?MODULE, ?SUP2]},
-                 permanent, 2000, supervisor, [?MODULE]},
-
-    {ok, {{one_for_one,0,1},  % no restarts allowed!
-          [SecondSup]
-         }};
+  {ok,
+   {{one_for_one, 0, 1},  % no restarts allowed!
+    [SecondSup]}};
 init(?SUP2) ->
-    %% The second-level supervisor allows some restarts. This is where the
-    %% normal services live.
-    {ok, {{one_for_one, 10, 20},
-          [ worker(system_monitor_kafka)
-          , worker(system_monitor_top)
-          , worker(system_monitor_events)
-          , worker(system_monitor)
-          ]
-         }}.
+  %% The second-level supervisor allows some restarts. This is where the
+  %% normal services live.
+  {ok,
+   {{one_for_one, 10, 20},
+    lists:flatten([system_monitor_callback:child_spec(),
+                   worker(system_monitor_top),
+                   worker(system_monitor_events),
+                   worker(system_monitor)])}}.

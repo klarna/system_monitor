@@ -257,7 +257,7 @@ report_full_status() ->
   %% reports for this time interval, so it can be used as a key to
   %% lookup the relevant events
   {TS, ProcTop} = system_monitor_top:get_proc_top(),
-  push_to_kafka(ProcTop),
+  system_monitor_callback:produce(ProcTop),
   report_app_top(TS),
   %% Node status report goes last, and it "seals" the report for this
   %% time interval:
@@ -269,7 +269,7 @@ report_full_status() ->
       _ ->
         <<>>
     end,
-  system_monitor_kafka:produce({node_role, node(), TS, iolist_to_binary(NodeReport)}).
+  system_monitor_callback:produce([{node_role, node(), TS, iolist_to_binary(NodeReport)}]).
 
 %%------------------------------------------------------------------------------
 %% @doc Calculate reductions per application.
@@ -296,16 +296,13 @@ present_results(Record, Tag, Values, TS) ->
   {ok, Thresholds} = application:get_env(?APP, top_significance_threshold),
   Threshold = maps:get(Tag, Thresholds, 0),
   Node = node(),
-  [system_monitor_kafka:produce({Record, Node, TS, Key, Tag, Val})
-   || {Key, Val} <- Values, Val > Threshold].
-
-%%--------------------------------------------------------------------
-%% @doc Push plain records to Kafka
-%%--------------------------------------------------------------------
--spec push_to_kafka([term()]) -> ok.
-push_to_kafka(L) ->
-  lists:foreach(fun system_monitor_kafka:produce/1, L).
-
+  L = lists:filtermap(fun ({Key, Val}) when Val > Threshold ->
+                            {true, {Record, Node, TS, Key, Tag, Val}};
+                          (_) ->
+                            false
+                      end,
+                      Values),
+  system_monitor_callback:produce(L).
 
 %%--------------------------------------------------------------------
 %% @doc logs "the interesting parts" of erl_top
