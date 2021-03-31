@@ -26,6 +26,8 @@
 -export([ report_full_status/0
         , check_process_count/0
         , self_monitor/0
+        , suspect_procs/0
+        , erl_top_to_str/1
         , start_top/0
         , stop_top/0
         ]).
@@ -42,7 +44,6 @@
 
 -define(SERVER, ?MODULE).
 -define(TICK_INTERVAL, 1000).
-
 
 -record(state, { monitors = []
                , timer_ref
@@ -154,6 +155,7 @@ monitors() ->
   {ok, TopInterval} = application:get_env(?APP, top_sample_interval),
   [ {?MODULE, check_process_count,  true,  2}
   , {?MODULE, self_monitor,         false, 5}
+  , {?MODULE, suspect_procs,        true,  5}
   , {?MODULE, report_full_status,   false, TopInterval div 1000}
   ] ++ AdditionalMonitors.
 
@@ -212,6 +214,40 @@ check_process_count() ->
     _ -> ok
   end.
 
+
+%%------------------------------------------------------------------------------
+%% Monitor for processes with suspect stats
+%%------------------------------------------------------------------------------
+suspect_procs() ->
+  {_TS, ProcTop} = system_monitor_top:get_proc_top(),
+  Env = fun(Name) -> application:get_env(?APP, Name, undefined) end,
+  Conf =
+    {Env(suspect_procs_max_memory),
+     Env(suspect_procs_max_message_queue_len),
+     Env(suspect_procs_max_total_heap_size)},
+  SuspectProcs = lists:filter(fun(Proc) -> is_suspect_proc(Proc, Conf) end, ProcTop),
+  lists:foreach(fun log_suspect_proc/1, SuspectProcs).
+
+is_suspect_proc(Proc, {MaxMemory, MaxMqLen, MaxTotalHeapSize}) ->
+  #erl_top{memory = Memory,
+           message_queue_len = MessageQueueLen,
+           total_heap_size = TotalHeapSize} =
+    Proc,
+  GreaterIfDef =
+    fun ({undefined, _}) ->
+          false;
+        ({Comp, Value}) ->
+          Value >= Comp
+    end,
+  ToCompare =
+    [{MaxMemory, Memory}, {MaxMqLen, MessageQueueLen}, {MaxTotalHeapSize, TotalHeapSize}],
+  lists:any(GreaterIfDef, ToCompare).
+
+log_suspect_proc(Proc) ->
+  ErlTopStr = erl_top_to_str(Proc),
+  Format = "Suspect Proc~n~s",
+  ?log(warning, Format, [ErlTopStr], #{domain => [system_monitor]}).
+
 %%------------------------------------------------------------------------------
 %% @doc Report top processes
 %%------------------------------------------------------------------------------
@@ -269,3 +305,73 @@ present_results(Record, Tag, Values, TS) ->
 -spec push_to_kafka([term()]) -> ok.
 push_to_kafka(L) ->
   lists:foreach(fun system_monitor_kafka:produce/1, L).
+
+
+%%--------------------------------------------------------------------
+%% @doc logs "the interesting parts" of erl_top
+%%--------------------------------------------------------------------
+erl_top_to_str(Proc) ->
+  #erl_top{registered_name = RegisteredName,
+           pid = Pid,
+           initial_call = InitialCall,
+           memory = Memory,
+           message_queue_len = MessageQueueLength,
+           stack_size = StackSize,
+           heap_size = HeapSize,
+           total_heap_size = TotalHeapSize,
+           current_function = CurrentFunction,
+           current_stacktrace = CurrentStack} =
+    Proc,
+  WordSize = erlang:system_info(wordsize),
+  Format =
+    "registered_name=~p~n"
+    "offending_pid=~s~n"
+    "initial_call=~s~n"
+    "memory=~p (~s)~n"
+    "message_queue_len=~p~n"
+    "stack_size=~p~n"
+    "heap_size=~p (~s)~n"
+    "total_heap_size=~p (~s)~n"
+    "current_function=~s~n"
+    "current_stack:~n~s",
+  Args =
+    [RegisteredName,
+     Pid,
+     fmt_mfa(InitialCall),
+     Memory, fmt_mem(Memory),
+     MessageQueueLength,
+     StackSize,
+     HeapSize, fmt_mem(WordSize * HeapSize),
+     TotalHeapSize, fmt_mem(WordSize * TotalHeapSize),
+     fmt_mfa(CurrentFunction),
+     fmt_stack(CurrentStack)],
+  io_lib:format(Format, Args).
+
+fmt_mem(Mem) ->
+  Units = [{1, "Bytes"}, {1024, "KB"}, {1024 * 1024, "MB"}, {1024 * 1024 * 1024, "GB"}],
+  MemIsSmallEnough = fun({Dividor, _UnitStr}) -> Mem =< Dividor * 1024 end,
+  {Dividor, UnitStr} =
+    find_first(MemIsSmallEnough, Units, {1024 * 1024 * 1024 * 1024, "TB"}),
+  io_lib:format("~.1f ~s", [Mem / Dividor, UnitStr]).
+
+fmt_stack(CurrentStack) ->
+  [[fmt_mfa(MFA), "\n"] || MFA <- CurrentStack].
+
+fmt_mfa({Mod, Fun, Arity, Prop}) ->
+  case proplists:get_value(line, Prop, undefined) of
+    undefined ->
+      fmt_mfa({Mod, Fun, Arity});
+    Line ->
+      io_lib:format("~s:~s/~p (Line ~p)", [Mod, Fun, Arity, Line])
+  end;
+fmt_mfa({Mod, Fun, Arity}) ->
+  io_lib:format("~s:~s/~p", [Mod, Fun, Arity]);
+fmt_mfa(L) ->
+  io_lib:format("~p", [L]).
+
+-spec find_first(fun((any()) -> boolean()), [T], Default) -> T | Default.
+find_first(Pred, List, Default) ->
+  case lists:search(Pred, List) of
+    {value, Elem} -> Elem;
+    false -> Default
+  end.
