@@ -1,25 +1,21 @@
 -module(system_monitor_callback).
 
--export([ child_spec/0
-        , produce/1
+-export([ start/0
+        , stop/1
+        , produce/2
         ]).
 
 -include_lib("system_monitor/include/system_monitor.hrl").
 
--callback child_spec() -> supervisor3:child_spec() | [].
--callback produce(list()) -> ok.
+-callback start() -> any().
+-callback stop(any()) -> ok.
+-callback produce(list(), any()) -> ok.
 
--optional_callbacks([ child_spec/0 ]).
+start() ->
+  (application:get_env(?APP, callback_mod, system_monitor_stdout)):?FUNCTION_NAME().
 
-child_spec() ->
-  {ok, Mod} = application:get_env(?APP, callback_mod),
-  code:ensure_loaded(Mod),
-  case erlang:function_exported(Mod, ?FUNCTION_NAME, ?FUNCTION_ARITY) of
-    true ->
-      Mod:?FUNCTION_NAME();
-    false ->
-      []
-  end.
+stop(State) ->
+  (application:get_env(?APP, callback_mod, system_monitor_stdout)):?FUNCTION_NAME(State).
 
-produce(Events) ->
-  (application:get_env(?APP, callback_mod)):?FUNCTION_NAME(Events).
+produce(Events, State) ->
+  (application:get_env(?APP, callback_mod, system_monitor_stdout)):?FUNCTION_NAME(Events, State).

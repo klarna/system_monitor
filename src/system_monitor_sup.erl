@@ -63,7 +63,6 @@ init(?SERVER) ->
      2000,
      supervisor,
      [?MODULE]},
-
   {ok,
    {{one_for_one, 0, 1},  % no restarts allowed!
     [SecondSup]}};
@@ -72,7 +71,6 @@ init(?SUP2) ->
   %% normal services live.
   {ok,
    {{one_for_one, 10, 20},
-    lists:flatten([system_monitor_callback:child_spec(),
-                   worker(system_monitor_top),
+    lists:flatten([worker(system_monitor_top),
                    worker(system_monitor_events),
                    worker(system_monitor)])}}.

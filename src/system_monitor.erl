@@ -23,7 +23,7 @@
 
 -export([reset/0]).
 
--export([ report_full_status/0
+-export([ report_full_status/1
         , check_process_count/0
         , self_monitor/0
         , suspect_procs/0
@@ -47,6 +47,7 @@
 
 -record(state, { monitors = []
                , timer_ref
+               , callback_state = []
                }).
 
 %% System monitor is started early, some application may be
@@ -89,15 +90,17 @@ reset() ->
 
 init([]) ->
   {ok, Timer} = timer:send_interval(?TICK_INTERVAL, {self(), tick}),
-  {ok, #state{ monitors = init_monitors()
+  CallbackState = system_monitor_callback:start(),
+  {ok, #state{ monitors = init_monitors(CallbackState)
              , timer_ref = Timer
+             , callback_state = CallbackState
              }}.
 
 handle_call(_Request, _From, State) ->
   {reply, {error, unknown_call}, State}.
 
-handle_cast(reset, State) ->
-  {noreply, State#state{monitors = init_monitors()}};
+handle_cast(reset, #state{callback_state = CallbackState} = State) ->
+  {noreply, State#state{monitors = init_monitors(CallbackState)}};
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
@@ -105,18 +108,18 @@ handle_info({Self, tick}, State) when Self =:= self() ->
   Monitors = [case Ticks - 1 of
                 0 ->
                   try
-                    apply(Module, Function, [])
+                    apply(Module, Function, Args)
                   catch
                     EC:Error:Stack ->
                       error_logger:warning_msg(
                         "system_monitor ~p crashed:~n~p:~p~nStacktrace: ~p~n",
                         [{Module, Function}, EC, Error, Stack])
                   end,
-                  {Module, Function, F, TicksReset, TicksReset};
+                  {Module, Function, Args, Bool, TicksReset, TicksReset};
                 TicksDecremented ->
-                  {Module, Function, F, TicksReset, TicksDecremented}
-              end || {Module, Function,
-                      F, TicksReset, Ticks} <- State#state.monitors],
+                  {Module, Function, Args, Bool, TicksReset, TicksDecremented}
+              end || {Module, Function, Args,
+                      Bool, TicksReset, Ticks} <- State#state.monitors],
   {noreply, State#state{monitors = Monitors}};
 handle_info(_Info, State) ->
   {noreply, State}.
@@ -134,11 +137,11 @@ terminate(_Reason, State) ->
 %%------------------------------------------------------------------------------
 %% @doc Returns the list of initiated monitors.
 %%------------------------------------------------------------------------------
--spec init_monitors() -> [{module(), function(), boolean(),
-                           pos_integer(), pos_integer()}].
-init_monitors() ->
-  [{Module, Function, F, Ticks, Ticks} ||
-    {Module, Function, F, Ticks} <- monitors()].
+-spec init_monitors(any()) -> [{module(), function(), any(), boolean(),
+                                       pos_integer(), pos_integer()}].
+init_monitors(CallbackState) ->
+  [{Module, Function, Args, Bool, Ticks, Ticks} ||
+    {Module, Function, Args, Bool, Ticks} <- monitors(CallbackState)].
 
 %%------------------------------------------------------------------------------
 %% @doc Returns the list of monitors. The format is
@@ -149,15 +152,15 @@ init_monitors() ->
 %%      the monitor in question. So, if NumberOfTicks is 3600, the monitor is
 %%      to be run once every hour, as there is a tick every second.
 %%------------------------------------------------------------------------------
--spec monitors() -> [{module(), function(), boolean(), pos_integer()}].
-monitors() ->
+-spec monitors(any()) -> [{module(), function(), any(), boolean(), pos_integer()}].
+monitors(CallbackState) ->
   {ok, AdditionalMonitors} = application:get_env(system_monitor, status_checks),
   {ok, TopInterval} = application:get_env(?APP, top_sample_interval),
-  [ {?MODULE, check_process_count,  true,  2}
-  , {?MODULE, self_monitor,         false, 5}
-  , {?MODULE, suspect_procs,        true,  5}
-  , {?MODULE, report_full_status,   false, TopInterval div 1000}
-  ] ++ AdditionalMonitors.
+  [{?MODULE, check_process_count, [], true, 2},
+   {?MODULE, self_monitor, [], false, 5},
+   {?MODULE, suspect_procs, [], true, 5},
+   {?MODULE, report_full_status, [CallbackState], false, TopInterval div 1000}]
+  ++ AdditionalMonitors.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -251,14 +254,14 @@ log_suspect_proc(Proc) ->
 %%------------------------------------------------------------------------------
 %% @doc Report top processes
 %%------------------------------------------------------------------------------
--spec report_full_status() -> ok.
-report_full_status() ->
+-spec report_full_status(any()) -> ok.
+report_full_status(CallbackState) ->
   %% `TS' variable should be used consistently in all following
   %% reports for this time interval, so it can be used as a key to
   %% lookup the relevant events
   {TS, ProcTop} = system_monitor_top:get_proc_top(),
-  system_monitor_callback:produce(ProcTop),
-  report_app_top(TS),
+  system_monitor_callback:produce(ProcTop, CallbackState),
+  report_app_top(TS, CallbackState),
   %% Node status report goes last, and it "seals" the report for this
   %% time interval:
   NodeReport =
@@ -269,30 +272,30 @@ report_full_status() ->
       _ ->
         <<>>
     end,
-  system_monitor_callback:produce([{node_role, node(), TS, iolist_to_binary(NodeReport)}]).
+  system_monitor_callback:produce([{node_role, node(), TS, iolist_to_binary(NodeReport)}], CallbackState).
 
 %%------------------------------------------------------------------------------
 %% @doc Calculate reductions per application.
 %%------------------------------------------------------------------------------
--spec report_app_top(erlang:timestamp()) -> ok.
-report_app_top(TS) ->
+-spec report_app_top(erlang:timestamp(), any()) -> ok.
+report_app_top(TS, CallbackState) ->
   AppReds  = system_monitor_top:get_abs_app_top(),
-  present_results(app_top, reductions, AppReds, TS),
+  present_results(app_top, reductions, AppReds, TS, CallbackState),
   AppMem   = system_monitor_top:get_app_memory(),
-  present_results(app_top, memory, AppMem, TS),
+  present_results(app_top, memory, AppMem, TS, CallbackState),
   AppProcs = system_monitor_top:get_app_processes(),
-  present_results(app_top, processes, AppProcs, TS),
+  present_results(app_top, processes, AppProcs, TS, CallbackState),
   #{ current_function := CurrentFunction
    , initial_call := InitialCall
    } = system_monitor_top:get_function_top(),
-  present_results(fun_top, current_function, CurrentFunction, TS),
-  present_results(fun_top, initial_call, InitialCall, TS),
+  present_results(fun_top, current_function, CurrentFunction, TS, CallbackState),
+  present_results(fun_top, initial_call, InitialCall, TS, CallbackState),
   ok.
 
 %%--------------------------------------------------------------------
 %% @doc Push app_top or fun_top information to kafka
 %%--------------------------------------------------------------------
-present_results(Record, Tag, Values, TS) ->
+present_results(Record, Tag, Values, TS, CallbackState) ->
   {ok, Thresholds} = application:get_env(?APP, top_significance_threshold),
   Threshold = maps:get(Tag, Thresholds, 0),
   Node = node(),
@@ -302,7 +305,7 @@ present_results(Record, Tag, Values, TS) ->
                             false
                       end,
                       Values),
-  system_monitor_callback:produce(L).
+  system_monitor_callback:produce(L, CallbackState).
 
 %%--------------------------------------------------------------------
 %% @doc logs "the interesting parts" of erl_top

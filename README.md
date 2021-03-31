@@ -7,8 +7,8 @@
 
 `system_monitor` is a BEAM VM monitoring and introspection application
 that helps troubleshooting live systems. It collects various
-information about Erlang processes and applications, and streams that
-data to Kafka. Unlike `observer`, `system_monitor` does not require
+information about Erlang processes and applications.
+Unlike `observer`, `system_monitor` does not require
 connecting to the monitored system via Erlang distribution protocol,
 and can be used to monitor systems with very tight access
 restrictions.
@@ -60,13 +60,7 @@ telemetry to Kafka:
 
 ```erlang
 {system_monitor,
-   [ {kafka_hosts, [{"localhost", 9094}]}
-   , {kafka_topic, <<"system_monitor">>}
-   , {kafka_client_config,
-      [ {sasl, {plain, "path-to-kafka-credentials"}}
-      , {ssl, true}
-      ]}
-   ]}
+   [ {callback_mod, your_callback_mod}]}
 ```
 
 ### Custom node status
