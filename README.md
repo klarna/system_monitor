@@ -7,8 +7,8 @@
 
 `system_monitor` is a BEAM VM monitoring and introspection application
 that helps troubleshooting live systems. It collects various
-information about Erlang processes and applications, and streams that
-data to Kafka. Unlike `observer`, `system_monitor` does not require
+information about Erlang processes and applications.
+Unlike `observer`, `system_monitor` does not require
 connecting to the monitored system via Erlang distribution protocol,
 and can be used to monitor systems with very tight access
 restrictions.
@@ -55,20 +55,6 @@ to the release apps. Add the following lines to `rebar.config`:
  ]}.
 ```
 
-Add the following configuration to `sys.config` to enable export of
-telemetry to Kafka:
-
-```erlang
-{system_monitor,
-   [ {kafka_hosts, [{"localhost", 9094}]}
-   , {kafka_topic, <<"system_monitor">>}
-   , {kafka_client_config,
-      [ {sasl, {plain, "path-to-kafka-credentials"}}
-      , {ssl, true}
-      ]}
-   ]}
-```
-
 ### Custom node status
 
 `system_monitor` can export arbitrary node status information that is
@@ -102,38 +88,15 @@ environment:
 
 More information about configurable options is found [here](src/system_monitor.app.src).
 
-## Collection of data
+## Local development
+A Postgres and Grafana cluster can be spun up using `make dev-start` and stopped using `make dev-stop`.
+Start `system_monitor` by calling `rebar3 shell` and start the application with `application:ensure_all_started(system_monitor)`.
 
-![deployment diagram](doc/setup.svg)
+At this point a grafana instance will be available on localhost:3000 with default login "admin" and password
+"admin" including some predefined dashboards.
 
-On the receiving side Kafka messages are picked up by
-[kflow](https://github.com/klarna-incubator/kflow) and stored in
-Postgres. Finally, [Grafana](https://grafana.com/) with postgres
-datasource presents the data.
-
-### Kflow
-An example of [Kflow](https://github.com/klarna-incubator/kflow) configuration for processing `system_monitor` data can be found [here](https://github.com/klarna-incubator/kflow/blob/master/config/kflow_config.erl).
-
-### Database
-[Here](https://github.com/klarna-incubator/kflow/blob/master/test/kflow_sysmon_receiver_SUITE_data/db/20-schema.sql) one can find the required database schema.
-
-### Grafana
-
-Grafana dashboard templates are found [here](https://github.com/klarna-incubator/kflow/tree/master/test/kflow_sysmon_receiver_SUITE_data/grafana/dashboards).
-
-## Development setup
-
-A toy dockerized demo is maintained as part of [kflow](https://github.com/klarna-incubator/kflow), it requires `erlang`, `docker`, `docker-compose` and `pwgen` to run. One can launch it like this:
-
-```sh
-git clone https://github.com/klarna-incubator/kflow
-cd kflow
-make run
-```
-
-After the services come up, all grafana dashboards will be availiable
-at http://localhost:3000/ with default login "admin" and password
-"admin".
+## Production setup
+For production, a similar Postgres has to be setup as is done in the Dockerfile for Postgres in case one chooses to go with a system_monitor -> Postgres setup.
 
 ## How to contribute
 

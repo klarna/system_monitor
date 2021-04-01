@@ -1,0 +1,14 @@
+# config file version
+apiVersion: 1
+
+datasources:
+  - name: Postgres
+    type: postgres
+    url: db:5432
+    database: system_monitor
+    user: grafana
+    secureJsonData:
+      password: "system_monitor_password"
+    jsonData:
+      sslmode: "disable"
+      timescaledb: false

@@ -19,7 +19,7 @@
 %-behaviour(supervisor3).
 
 %% External exports
--export([start_link/0]).
+-export([start_link/0, start_child/1]).
 
 %% supervisor callbacks
 -export([init/1, post_init/1]).
@@ -35,6 +35,9 @@
 %%%----------------------------------------------------------------------
 start_link() ->
     supervisor3:start_link({local, ?SERVER}, ?MODULE, ?SERVER).
+
+start_child(Name) ->
+    supervisor3:start_child(?SUP2, worker(Name)).
 
 %%%----------------------------------------------------------------------
 %%% Callback functions from supervisor
@@ -69,8 +72,7 @@ init(?SUP2) ->
     %% The second-level supervisor allows some restarts. This is where the
     %% normal services live.
     {ok, {{one_for_one, 10, 20},
-          [ worker(system_monitor_kafka)
-          , worker(system_monitor_top)
+          [ worker(system_monitor_top)
           , worker(system_monitor_events)
           , worker(system_monitor)
           ]

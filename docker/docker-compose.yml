@@ -1,0 +1,15 @@
+version: "3.6"
+
+services:
+  db:
+    build: db
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=system_monitor_password
+
+  grafana:
+    build: grafana
+    depends_on: [db]
+    ports:
+      - 3000:3000

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [2.0.0] - 2021-04-07
+
+Remove kafka -> kflow and replace it with to the configured destination.
+
 ## [1.0.0] - 2020-09-02
 
 Initial version
