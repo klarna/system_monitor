@@ -88,6 +88,33 @@ environment:
 
 More information about configurable options is found [here](src/system_monitor.app.src).
 
+## How it all works out
+
+System_monitor will spawn several processes that handle different states:
+
+* `system_monitor_top`
+  Collects a certain amount of data from BEAM for a preconfigured number of processes
+* `system_monitor_events`
+  Subscribes to certain types of preconfigured BEAM events such as: busy_port, long_gc, long_schedule etc
+* `system_monitor`
+  Runs periodically a set of preconfigured `monitors`
+
+### What are the preconfigured monitors
+
+* `check_process_count`
+  Logs if the process_count passes a certain threshold
+* `suspect_procs`
+  Logs if it detects processes with suspiciously high memory
+* `report_full_status`
+  Gets the state from `system_monitor_top` and produces to a backend of choice
+  that implements `system_monitor_callback` behavior.
+  The preconfigured backend is Postgres and is implemented via `system_monitor_pg`.
+
+`system_monitor_pg` allows for Postgres being temporary down by storing the stats in its own internal buffer.
+This buffer is built with a sliding window that will stop the state from growing too big whenever
+Postgres is down for too long. On top of this `system_monitor_pg` has a built-in load 
+shedding mechanism that protects itself once the message length queue grows bigger than a certain level.
+
 ## Local development
 A Postgres and Grafana cluster can be spun up using `make dev-start` and stopped using `make dev-stop`.
 Start `system_monitor` by calling `rebar3 shell` and start the application with `application:ensure_all_started(system_monitor)`.

@@ -25,7 +25,7 @@
  , {applications, [kernel, stdlib, supervisor3, epgsql]}
  , {env,
     [ %% Specifies how many topmost processes should be reported per
-      %% catergory (such as `top_memory', `top_reductions', etc.)
+      %% category (such as `top_memory', `top_reductions', etc.)
       {top_num_items, 10}
       %% Specifies how often process top should be collected (in ms):
     , {top_sample_interval, 2000}

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - 2021-04-07
 
-Remove kafka -> kflow and replace it with to the configured destination.
+Replace Kafka backend with a configurable one that defaults into Postgres
 
 ## [1.0.0] - 2020-09-02
 
