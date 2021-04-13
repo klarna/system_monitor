@@ -11,6 +11,14 @@ doc/%.png: doc/%.uml
 doc: $(PICS)
 	rebar3 edoc
 
+.PHONY: dev-start
+dev-start:
+	docker-compose -f docker/docker-compose.yml up -d
+
+.PHONY: dev-stop
+dev-stop:
+	docker-compose -f docker/docker-compose.yml down --rmi all
+
 .PHONY: clean
 clean:
 	rm -rf _build

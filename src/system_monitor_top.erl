@@ -14,7 +14,7 @@
 %% limitations under the License.
 %%--------------------------------------------------------------------------------
 %%% @doc
-%%% Collect Erlang process statitics and push it to Kafka
+%%% Collect Erlang process statistics and push it to the configured destination
 %%% @end
 -module(system_monitor_top).
 
@@ -53,7 +53,7 @@
         , num_items          :: integer()
         , timer              :: timer:tref()
         , old_data           :: [#pid_info{}]
-        , last_ts            :: erlang:timestamp()
+        , last_ts            :: integer()
         , proc_top = []      :: [#erl_top{}]
         , app_top = []       :: [#app_top{}]
         , function_top =
@@ -81,7 +81,7 @@
 %% Get Erlang process top
 %% @end
 %%--------------------------------------------------------------------
--spec get_proc_top() -> {erlang:timestamp(), [#erl_top{}]}.
+-spec get_proc_top() -> {integer(), [#erl_top{}]}.
 get_proc_top() ->
   {ok, Data} = gen_server:call(?SERVER, get_proc_top, infinity),
   Data.
@@ -170,7 +170,7 @@ init([]) ->
              , interval    = Interval
              , num_items   = NumItems
              , timer       = TRef
-             , last_ts     = erlang:timestamp()
+             , last_ts     = os:system_time()
              , old_data    = []
              }}.
 
@@ -196,8 +196,8 @@ handle_cast(_Msg, State) ->
 
 handle_info(collect_data, State) ->
   T0 = State#state.last_ts,
-  T1 = erlang:timestamp(),
-  Dt = timer:now_diff(T1, T0) / 1000000,
+  T1 = os:system_time(),
+  Dt = erlang:convert_time_unit(T1 - T0, native, microsecond),
   NumProcesses = erlang:system_info(process_count),
   Pids = processes(),
   FunctionTop = process_aggregate(Pids, State#state.sample_size),
@@ -213,8 +213,8 @@ handle_info(collect_data, State) ->
   end,
   %% Calculate timer interval. Sleep at least half a second between
   %% samples when sysmon is running very slow:
-  T2 = erlang:timestamp(),
-  Dt2 = timer:now_diff(T2, T1) div 1000,
+  T2 = os:system_time(),
+  Dt2 = erlang:convert_time_unit(T2 - T1, native, microsecond),
   SleepTime = max(500, State#state.interval - Dt2),
   {ok, TRef} = timer:send_after(SleepTime, collect_data),
   {noreply, State#state{ last_ts      = T1
@@ -286,7 +286,7 @@ do_app_top(Deltas) ->
               };
             {ok, App} ->
               AppInfo = #app_top{ app = App
-                                , red_rel = Reds/TotalReds
+                                , red_rel = divide(Reds, TotalReds)
                                 , red_abs = Reds
                                 , memory = Mem
                                 , processes = Procs
@@ -297,12 +297,17 @@ do_app_top(Deltas) ->
       {[], 0, 0, 0},
       ?TOP_APP_TAB),
   UnknownApp = #app_top{ app       = unknown
-                       , red_rel   = UnknownReds/TotalReds
+                       , red_rel   = divide(UnknownReds, TotalReds)
                        , red_abs   = UnknownReds
                        , memory    = UnknownMem
                        , processes = UnknownProcs
                        },
   [UnknownApp|AppInfo].
+
+divide(_A, 0) ->
+  0;
+divide(A, B) ->
+  A / B.
 
 %%------------------------------------------------------------------------------
 %% @doc Return if it's safe to collect process dictionary
@@ -362,7 +367,7 @@ process_aggregate(Pids0, SampleSize) ->
 %% Find processes that take the most resources
 %% @end
 %%--------------------------------------------------------------------
--spec do_proc_top([#pid_info{}], #state{}, erlang:timestamp()) -> [#erl_top{}].
+-spec do_proc_top([#pid_info{}], #state{}, integer()) -> [#erl_top{}].
 do_proc_top(Deltas, State, Now) ->
   NumElems = State#state.num_items,
   case length(Deltas) > NumElems of
@@ -399,52 +404,56 @@ do_proc_top(Deltas, State, Now) ->
   %% Request additional data for the top processes:
   [finalize_proc_info(P, Now) || P <- TopElems].
 
--spec finalize_proc_info(#pid_info{}, erlang:timestamp()) -> #erl_top{}.
+-spec finalize_proc_info(#pid_info{}, integer()) -> #erl_top{}.
 finalize_proc_info(#pid_info{pid = Pid, group_leader = GL} = ProcInfo, Now) ->
   ProcessInfo = process_info(Pid, ?ADDITIONAL_FIELDS ++ maybe_dictionary()),
   case ProcessInfo of
-    [ {initial_call, _IC}
-    , {registered_name, Name}
-    , {stack_size, Stack}
-    , {heap_size, Heap}
-    , {total_heap_size, Total}
-    , {current_stacktrace, Stacktrace}
-    | _] ->
-      [{CurrModule, CurrFun, CurrArity, _} |_] = Stacktrace,
-      #erl_top{ node                = node()
-              , ts                  = Now
-              , pid                 = pid_to_list(ProcInfo#pid_info.pid)
-              , group_leader        = pid_to_list(GL)
-              , dreductions         = ProcInfo#pid_info.dreductions
-              , dmemory             = ProcInfo#pid_info.dmemory
-              , reductions          = ProcInfo#pid_info.reductions
-              , memory              = ProcInfo#pid_info.memory
-              , message_queue_len   = ProcInfo#pid_info.message_queue_len
-              , initial_call        = initial_call(ProcessInfo)
-              , registered_name     = Name
-              , stack_size          = Stack
-              , heap_size           = Heap
-              , total_heap_size     = Total
-              , current_stacktrace  = Stacktrace
-              , current_function    = {CurrModule, CurrFun, CurrArity}
-              };
+    [{initial_call, _IC},
+     {registered_name, Name},
+     {stack_size, Stack},
+     {heap_size, Heap},
+     {total_heap_size, Total},
+     {current_stacktrace, Stacktrace}
+     | _] ->
+      CurrentFunction =
+        case Stacktrace of
+          [] ->
+            {unknown, unknown, 0};
+          [{CurrModule, CurrFun, CurrArity, _} | _] ->
+            {CurrModule, CurrFun, CurrArity}
+        end,
+      #erl_top{node = node(),
+               ts = Now,
+               pid = pid_to_list(ProcInfo#pid_info.pid),
+               group_leader = pid_to_list(GL),
+               dreductions = ProcInfo#pid_info.dreductions,
+               dmemory = ProcInfo#pid_info.dmemory,
+               reductions = ProcInfo#pid_info.reductions,
+               memory = ProcInfo#pid_info.memory,
+               message_queue_len = ProcInfo#pid_info.message_queue_len,
+               initial_call = initial_call(ProcessInfo),
+               registered_name = Name,
+               stack_size = Stack,
+               heap_size = Heap,
+               total_heap_size = Total,
+               current_stacktrace = Stacktrace,
+               current_function = CurrentFunction};
     undefined ->
-      #erl_top{ node                = node()
-              , ts                  = Now
-              , pid                 = pid_to_list(ProcInfo#pid_info.pid)
-              , group_leader        = pid_to_list(GL)
-              , dreductions         = ProcInfo#pid_info.dreductions
-              , dmemory             = ProcInfo#pid_info.dmemory
-              , reductions          = ProcInfo#pid_info.reductions
-              , memory              = ProcInfo#pid_info.memory
-              , message_queue_len   = ProcInfo#pid_info.message_queue_len
-              , initial_call        = {unknown, unknown, 0}
-              , current_function    = {unknown, unknown, 0}
-              , stack_size          = 0
-              , heap_size           = 0
-              , total_heap_size     = 0
-              , current_stacktrace  = []
-              }
+      #erl_top{node = node(),
+               ts = Now,
+               pid = pid_to_list(ProcInfo#pid_info.pid),
+               group_leader = pid_to_list(GL),
+               dreductions = ProcInfo#pid_info.dreductions,
+               dmemory = ProcInfo#pid_info.dmemory,
+               reductions = ProcInfo#pid_info.reductions,
+               memory = ProcInfo#pid_info.memory,
+               message_queue_len = ProcInfo#pid_info.message_queue_len,
+               initial_call = {unknown, unknown, 0},
+               current_function = {unknown, unknown, 0},
+               stack_size = 0,
+               heap_size = 0,
+               total_heap_size = 0,
+               current_stacktrace = []}
   end.
 
 -spec maybe_push_to_top(integer(), #pid_info{}, top()) -> top().
@@ -577,7 +586,7 @@ do_get_app_top(FieldId) ->
     lists:keysort(2, [{Val#app_top.app, element(FieldId, Val)}
                       || Val <- Data])).
 
--spec fake_erl_top_msg(erlang:timestamp()) -> #erl_top{}.
+-spec fake_erl_top_msg(integer()) -> #erl_top{}.
 fake_erl_top_msg(Now) ->
   #erl_top{ node               = node()
           , ts                 = Now

@@ -7,8 +7,8 @@
 
 `system_monitor` is a BEAM VM monitoring and introspection application
 that helps troubleshooting live systems. It collects various
-information about Erlang processes and applications, and streams that
-data to Kafka. Unlike `observer`, `system_monitor` does not require
+information about Erlang processes and applications.
+Unlike `observer`, `system_monitor` does not require
 connecting to the monitored system via Erlang distribution protocol,
 and can be used to monitor systems with very tight access
 restrictions.
@@ -55,20 +55,6 @@ to the release apps. Add the following lines to `rebar.config`:
  ]}.
 ```
 
-Add the following configuration to `sys.config` to enable export of
-telemetry to Kafka:
-
-```erlang
-{system_monitor,
-   [ {kafka_hosts, [{"localhost", 9094}]}
-   , {kafka_topic, <<"system_monitor">>}
-   , {kafka_client_config,
-      [ {sasl, {plain, "path-to-kafka-credentials"}}
-      , {ssl, true}
-      ]}
-   ]}
-```
-
 ### Custom node status
 
 `system_monitor` can export arbitrary node status information that is
@@ -102,38 +88,42 @@ environment:
 
 More information about configurable options is found [here](src/system_monitor.app.src).
 
-## Collection of data
+## How it all works out
 
-![deployment diagram](doc/setup.svg)
+System_monitor will spawn several processes that handle different states:
 
-On the receiving side Kafka messages are picked up by
-[kflow](https://github.com/klarna-incubator/kflow) and stored in
-Postgres. Finally, [Grafana](https://grafana.com/) with postgres
-datasource presents the data.
+* `system_monitor_top`
+  Collects a certain amount of data from BEAM for a preconfigured number of processes
+* `system_monitor_events`
+  Subscribes to certain types of preconfigured BEAM events such as: busy_port, long_gc, long_schedule etc
+* `system_monitor`
+  Runs periodically a set of preconfigured `monitors`
 
-### Kflow
-An example of [Kflow](https://github.com/klarna-incubator/kflow) configuration for processing `system_monitor` data can be found [here](https://github.com/klarna-incubator/kflow/blob/master/config/kflow_config.erl).
+### What are the preconfigured monitors
 
-### Database
-[Here](https://github.com/klarna-incubator/kflow/blob/master/test/kflow_sysmon_receiver_SUITE_data/db/20-schema.sql) one can find the required database schema.
+* `check_process_count`
+  Logs if the process_count passes a certain threshold
+* `suspect_procs`
+  Logs if it detects processes with suspiciously high memory
+* `report_full_status`
+  Gets the state from `system_monitor_top` and produces to a backend of choice
+  that implements `system_monitor_callback` behavior.
+  The preconfigured backend is Postgres and is implemented via `system_monitor_pg`.
 
-### Grafana
+`system_monitor_pg` allows for Postgres being temporary down by storing the stats in its own internal buffer.
+This buffer is built with a sliding window that will stop the state from growing too big whenever
+Postgres is down for too long. On top of this `system_monitor_pg` has a built-in load 
+shedding mechanism that protects itself once the message length queue grows bigger than a certain level.
 
-Grafana dashboard templates are found [here](https://github.com/klarna-incubator/kflow/tree/master/test/kflow_sysmon_receiver_SUITE_data/grafana/dashboards).
+## Local development
+A Postgres and Grafana cluster can be spun up using `make dev-start` and stopped using `make dev-stop`.
+Start `system_monitor` by calling `rebar3 shell` and start the application with `application:ensure_all_started(system_monitor)`.
 
-## Development setup
+At this point a grafana instance will be available on localhost:3000 with default login "admin" and password
+"admin" including some predefined dashboards.
 
-A toy dockerized demo is maintained as part of [kflow](https://github.com/klarna-incubator/kflow), it requires `erlang`, `docker`, `docker-compose` and `pwgen` to run. One can launch it like this:
-
-```sh
-git clone https://github.com/klarna-incubator/kflow
-cd kflow
-make run
-```
-
-After the services come up, all grafana dashboards will be availiable
-at http://localhost:3000/ with default login "admin" and password
-"admin".
+## Production setup
+For production, a similar Postgres has to be setup as is done in the Dockerfile for Postgres in case one chooses to go with a system_monitor -> Postgres setup.
 
 ## How to contribute
 

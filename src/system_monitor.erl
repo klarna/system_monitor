@@ -1,10 +1,19 @@
-%% -*- erlang-indent-level: 2 -*-
-%%%-------------------------------------------------------------------
-%%% File    : system_monitor.erl
-%%% Description : Monitor for some system parameters.
-%%%
-%%% Created : 20 Dec 2011 by Thomas Jarvstrand <>
-%%%-------------------------------------------------------------------
+%% -*- mode: erlang -*-
+%%--------------------------------------------------------------------------------
+%% Copyright 2021 Klarna Bank AB
+%%
+%% Licensed under the Apache License, Version 2.0 (the "License");
+%% you may not use this file except in compliance with the License.
+%% You may obtain a copy of the License at
+%%
+%%     http://www.apache.org/licenses/LICENSE-2.0
+%%
+%% Unless required by applicable law or agreed to in writing, software
+%% distributed under the License is distributed on an "AS IS" BASIS,
+%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%% See the License for the specific language governing permissions and
+%% limitations under the License.
+%%--------------------------------------------------------------------------------
 %% @private
 -module(system_monitor).
 
@@ -25,15 +34,17 @@
 
 -export([ report_full_status/0
         , check_process_count/0
-        , self_monitor/0
         , suspect_procs/0
         , erl_top_to_str/1
         , start_top/0
         , stop_top/0
+        , fmt_mfa/1
+        , fmt_stack/1
         ]).
 
 %% gen_server callbacks
 -export([ init/1
+        , handle_continue/2
         , handle_call/3
         , handle_cast/2
         , handle_info/2
@@ -48,10 +59,6 @@
 -record(state, { monitors = []
                , timer_ref
                }).
-
-%% System monitor is started early, some application may be
-%% unavalable
--define(MAYBE(Prog), try Prog catch _:_ -> undefined end).
 
 %%====================================================================
 %% API
@@ -89,9 +96,11 @@ reset() ->
 
 init([]) ->
   {ok, Timer} = timer:send_interval(?TICK_INTERVAL, {self(), tick}),
-  {ok, #state{ monitors = init_monitors()
-             , timer_ref = Timer
-             }}.
+  {ok, #state{monitors = init_monitors(), timer_ref = Timer}, {continue, start_callback}}.
+
+handle_continue(start_callback, State) ->
+  ok = system_monitor_callback:start(),
+  {noreply, State}.
 
 handle_call(_Request, _From, State) ->
   {reply, {error, unknown_call}, State}.
@@ -112,11 +121,11 @@ handle_info({Self, tick}, State) when Self =:= self() ->
                         "system_monitor ~p crashed:~n~p:~p~nStacktrace: ~p~n",
                         [{Module, Function}, EC, Error, Stack])
                   end,
-                  {Module, Function, F, TicksReset, TicksReset};
+                  {Module, Function, RunOnTerminate, TicksReset, TicksReset};
                 TicksDecremented ->
-                  {Module, Function, F, TicksReset, TicksDecremented}
+                  {Module, Function, RunOnTerminate, TicksReset, TicksDecremented}
               end || {Module, Function,
-                      F, TicksReset, Ticks} <- State#state.monitors],
+                      RunOnTerminate, TicksReset, Ticks} <- State#state.monitors],
   {noreply, State#state{monitors = Monitors}};
 handle_info(_Info, State) ->
   {noreply, State}.
@@ -134,11 +143,10 @@ terminate(_Reason, State) ->
 %%------------------------------------------------------------------------------
 %% @doc Returns the list of initiated monitors.
 %%------------------------------------------------------------------------------
--spec init_monitors() -> [{module(), function(), boolean(),
-                           pos_integer(), pos_integer()}].
+-spec init_monitors() -> [{module(), function(), boolean(), pos_integer(), pos_integer()}].
 init_monitors() ->
-  [{Module, Function, F, Ticks, Ticks} ||
-    {Module, Function, F, Ticks} <- monitors()].
+  [{Module, Function, RunOnTerminate, Ticks, Ticks}
+   || {Module, Function, RunOnTerminate, Ticks} <- monitors()].
 
 %%------------------------------------------------------------------------------
 %% @doc Returns the list of monitors. The format is
@@ -153,45 +161,10 @@ init_monitors() ->
 monitors() ->
   {ok, AdditionalMonitors} = application:get_env(system_monitor, status_checks),
   {ok, TopInterval} = application:get_env(?APP, top_sample_interval),
-  [ {?MODULE, check_process_count,  true,  2}
-  , {?MODULE, self_monitor,         false, 5}
-  , {?MODULE, suspect_procs,        true,  5}
-  , {?MODULE, report_full_status,   false, TopInterval div 1000}
-  ] ++ AdditionalMonitors.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Monitor mailbox size of system_monitor_kafka process
-%%
-%% Check message queue length of this process and kill it when it's growing
-%% uncontrollably. It is needed because this process doesn't have backpressure
-%% by design
-%% @end
-%%------------------------------------------------------------------------------
-self_monitor() ->
-  message_queue_sentinel(system_monitor_kafka, 3000).
-
--spec message_queue_sentinel(atom() | pid(), integer()) -> ok.
-message_queue_sentinel(Name, Limit) when is_atom(Name) ->
-  case whereis(Name) of
-    Pid when is_pid(Pid) ->
-      message_queue_sentinel(Pid, Limit);
-    _ ->
-      ok
-  end;
-message_queue_sentinel(Pid, Limit) when is_pid(Pid) ->
-  case process_info(Pid, [message_queue_len, current_function]) of
-    [{message_queue_len, Len}, {current_function, Fun}] when Len >= Limit ->
-      ?log( warning
-          , "Abnormal message queue length (~p). "
-            "Process ~p (~p) will be terminated."
-          , [Len, Pid, Fun]
-          , #{domain => [system_monitor]}
-          ),
-      exit(Pid, kill);
-    _ ->
-      ok
-  end.
+  [{?MODULE, check_process_count, true, 2},
+   {?MODULE, suspect_procs, true, 5},
+   {?MODULE, report_full_status, false, TopInterval div 1000}]
+  ++ AdditionalMonitors.
 
 %%------------------------------------------------------------------------------
 %% Monitor for number of processes
@@ -257,24 +230,29 @@ report_full_status() ->
   %% reports for this time interval, so it can be used as a key to
   %% lookup the relevant events
   {TS, ProcTop} = system_monitor_top:get_proc_top(),
-  push_to_kafka(ProcTop),
+  system_monitor_callback:produce(proc_top, ProcTop),
   report_app_top(TS),
   %% Node status report goes last, and it "seals" the report for this
   %% time interval:
   NodeReport =
     case application:get_env(?APP, node_status_fun) of
       {ok, {Module, Function}} ->
-        try Module:Function()
-        catch _:_ -> <<>> end;
+        try
+          Module:Function()
+        catch
+          _:_ ->
+            <<>>
+        end;
       _ ->
         <<>>
     end,
-  system_monitor_kafka:produce({node_role, node(), TS, iolist_to_binary(NodeReport)}).
+  system_monitor_callback:produce(node_role,
+                                  [{node_role, node(), TS, iolist_to_binary(NodeReport)}]).
 
 %%------------------------------------------------------------------------------
 %% @doc Calculate reductions per application.
 %%------------------------------------------------------------------------------
--spec report_app_top(erlang:timestamp()) -> ok.
+-spec report_app_top(integer()) -> ok.
 report_app_top(TS) ->
   AppReds  = system_monitor_top:get_abs_app_top(),
   present_results(app_top, reductions, AppReds, TS),
@@ -290,22 +268,19 @@ report_app_top(TS) ->
   ok.
 
 %%--------------------------------------------------------------------
-%% @doc Push app_top or fun_top information to kafka
+%% @doc Push app_top or fun_top information to the configured destination
 %%--------------------------------------------------------------------
 present_results(Record, Tag, Values, TS) ->
   {ok, Thresholds} = application:get_env(?APP, top_significance_threshold),
   Threshold = maps:get(Tag, Thresholds, 0),
   Node = node(),
-  [system_monitor_kafka:produce({Record, Node, TS, Key, Tag, Val})
-   || {Key, Val} <- Values, Val > Threshold].
-
-%%--------------------------------------------------------------------
-%% @doc Push plain records to Kafka
-%%--------------------------------------------------------------------
--spec push_to_kafka([term()]) -> ok.
-push_to_kafka(L) ->
-  lists:foreach(fun system_monitor_kafka:produce/1, L).
-
+  L = lists:filtermap(fun ({Key, Val}) when Val > Threshold ->
+                            {true, {Record, Node, TS, Key, Tag, Val}};
+                          (_) ->
+                            false
+                      end,
+                      Values),
+  system_monitor_callback:produce(Record, L).
 
 %%--------------------------------------------------------------------
 %% @doc logs "the interesting parts" of erl_top

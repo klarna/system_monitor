@@ -1,5 +1,5 @@
 %%--------------------------------------------------------------------------------
-%% Copyright 2020 Klarna Bank AB
+%% Copyright 2021 Klarna Bank AB
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -13,9 +13,29 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 %%--------------------------------------------------------------------------------
--ifndef(__SYSMON_KAFKA_HRL__).
--define(__SYSMON_KAFKA_HRL__, true).
 
--define(SYSMON_KAFKA_CLIENT, system_monitor_kafka_client).
+-module(system_monitor_callback).
 
--endif.
+-export([ start/0
+        , stop/0
+        , produce/2
+        ]).
+
+-include_lib("system_monitor/include/system_monitor.hrl").
+
+-callback start() -> ok.
+-callback stop() -> ok.
+-callback produce(atom(), list()) -> ok.
+
+start() ->
+  (get_callback_mod()):?FUNCTION_NAME().
+
+stop() ->
+  (get_callback_mod()):?FUNCTION_NAME().
+
+produce(Type, Events) ->
+  (get_callback_mod()):?FUNCTION_NAME(Type, Events).
+
+-compile({inline, [get_callback_mod/0]}).
+get_callback_mod() ->
+  application:get_env(?APP, callback_mod, system_monitor_pg).
