@@ -568,11 +568,11 @@ top_to_list({_, Top}) ->
 delta(P1, P2, Dt) ->
   case P1 of
     undefined ->
-      DRed = P2#pid_info.reductions / Dt,
-      DMem = P2#pid_info.memory / Dt;
+      DRed = divide(P2#pid_info.reductions, Dt),
+      DMem = divide(P2#pid_info.memory, Dt);
     _ ->
-      DRed = (P2#pid_info.reductions - P1#pid_info.reductions) / Dt,
-      DMem = (P2#pid_info.memory - P1#pid_info.memory) / Dt
+      DRed = divide((P2#pid_info.reductions - P1#pid_info.reductions), Dt),
+      DMem = divide((P2#pid_info.memory - P1#pid_info.memory), Dt)
   end,
   P2#pid_info
     { dreductions = DRed
