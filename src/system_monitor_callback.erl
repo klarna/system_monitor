@@ -19,6 +19,7 @@
 -export([ start/0
         , stop/0
         , produce/2
+        , is_configured/0
         ]).
 
 -include_lib("system_monitor/include/system_monitor.hrl").
@@ -38,4 +39,7 @@ produce(Type, Events) ->
 
 -compile({inline, [get_callback_mod/0]}).
 get_callback_mod() ->
-  application:get_env(?APP, callback_mod, system_monitor_pg).
+  application:get_env(?APP, callback_mod, undefined).
+
+is_configured() ->
+  get_callback_mod() =/= undefined.

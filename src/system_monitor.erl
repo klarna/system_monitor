@@ -99,7 +99,10 @@ init([]) ->
   {ok, #state{monitors = init_monitors(), timer_ref = Timer}, {continue, start_callback}}.
 
 handle_continue(start_callback, State) ->
-  ok = system_monitor_callback:start(),
+  case system_monitor_callback:is_configured() of
+    true -> ok = system_monitor_callback:start();
+    false -> ok
+  end,
   {noreply, State}.
 
 handle_call(_Request, _From, State) ->
@@ -160,10 +163,17 @@ init_monitors() ->
 -spec monitors() -> [{module(), function(), boolean(), pos_integer()}].
 monitors() ->
   {ok, AdditionalMonitors} = application:get_env(system_monitor, status_checks),
-  {ok, TopInterval} = application:get_env(?APP, top_sample_interval),
+  MaybeReportFullStatusMonitor =
+    case system_monitor_callback:is_configured() of
+      true ->
+        {ok, TopInterval} = application:get_env(?APP, top_sample_interval),
+        [{?MODULE, report_full_status, false, TopInterval div 1000}];
+      false ->
+        []
+    end,
   [{?MODULE, check_process_count, true, 2},
-   {?MODULE, suspect_procs, true, 5},
-   {?MODULE, report_full_status, false, TopInterval div 1000}]
+   {?MODULE, suspect_procs, true, 5}]
+  ++ MaybeReportFullStatusMonitor
   ++ AdditionalMonitors.
 
 %%------------------------------------------------------------------------------
