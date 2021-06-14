@@ -106,8 +106,10 @@ System_monitor will spawn several processes that handle different states:
 * `suspect_procs`
   Logs if it detects processes with suspiciously high memory
 * `report_full_status`
-  Gets the state from `system_monitor_top` and produces to a backend of choice
-  that implements `system_monitor_callback` behavior.
+  Gets the state from `system_monitor_top` and produces to a backend module
+  that implements the `system_monitor_callback` behavior, selected by binding
+  `callback_mod` in the `system_monitor` application environment to that module.
+  If `callback_mod` is unbound, this monitor is disabled.
   The preconfigured backend is Postgres and is implemented via `system_monitor_pg`.
 
 `system_monitor_pg` allows for Postgres being temporary down by storing the stats in its own internal buffer.
