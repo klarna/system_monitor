@@ -165,7 +165,8 @@ mk_partitions(Conn) ->
   DaysBehind = application:get_env(system_monitor, partition_days_behind, 10),
   GDate = calendar:date_to_gregorian_days(date()),
   DaysAheadL = lists:seq(GDate, GDate + DaysAhead),
-  DaysBehindL = lists:seq(GDate - DaysBehind, GDate - 1),
+  %% Delete 10 days older than partition_days_behind config
+  DaysBehindL = lists:seq(GDate - DaysBehind - 10, GDate - DaysBehind - 1),
   lists:foreach(fun(Day) -> create_partition_tables(Conn, Day) end, DaysAheadL),
   lists:foreach(fun(Day) -> delete_partition_tables(Conn, Day) end, DaysBehindL).
 
