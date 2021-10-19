@@ -25,6 +25,9 @@
 
 -record(pid_info,
         { pid                 :: pid()
+        , initial_call        :: mfa() | undefined
+        , registered_name     :: atom() | []
+        , current_function    :: mfa() | undefined
         , reductions          :: integer()
         , dreductions         :: number() | undefined
         , memory              :: integer()
