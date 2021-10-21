@@ -41,7 +41,6 @@
 -define(SERVER, ?MODULE).
 
 -define(TOP_APP_TAB, sysmon_top_app_tab).
--define(TOP_FUN_TAB, sysmon_top_app_tab).
 -define(TAB_OPTS, [private, named_table, set, {keypos, 1}]).
 
 %% Type and record definitions
@@ -64,11 +63,15 @@
 
 -type top() :: {integer(), gb_trees:tree(integer(), [#pid_info{}])}.
 
--define(PROCESS_INFO_FIELDS,
-        [ group_leader, reductions, memory, message_queue_len]).
+-define(PROCESS_INFO_FIELDS_NEW,
+        [ initial_call, dictionary, registered_name, group_leader, reductions, memory,
+          message_queue_len, current_function]).
+
+-define(PROCESS_INFO_FIELDS_UPDATE,
+        [ reductions, memory, message_queue_len, current_function]).
 
 -define(ADDITIONAL_FIELDS,
-        [ initial_call, registered_name, stack_size
+        [ stack_size
         , heap_size, total_heap_size, current_stacktrace
         ]).
 
@@ -195,22 +198,23 @@ handle_cast(_Msg, State) ->
   {noreply, State}.
 
 handle_info(collect_data, State) ->
-  T0 = State#state.last_ts,
   T1 = os:system_time(),
-  Dt = erlang:convert_time_unit(T1 - T0, native, microsecond),
   NumProcesses = erlang:system_info(process_count),
-  Pids = processes(),
-  FunctionTop = process_aggregate(Pids, State#state.sample_size),
-  case get_process_info(Pids, NumProcesses, State#state.max_procs) of
-    {ok, NewData} ->
-      Deltas = calc_deltas(State#state.old_data, NewData, [], Dt),
-      ProcTop = do_proc_top(Deltas, State, T1),
-      AppTop = do_app_top(Deltas);
-    error ->
+  case should_calculate_info(NumProcesses, State#state.max_procs) of
+    true ->
+      T0 = State#state.last_ts,
+      Dt = erlang:convert_time_unit(T1 - T0, native, microsecond),
+      Pids = lists:sort(processes()),
+      OldData = State#state.old_data,
+      NewData = calc_deltas(OldData, Pids, Dt),
+      ProcTop = do_proc_top(NewData, State, T1),
+      AppTop = do_app_top(NewData);
+    false ->
       AppTop = [],
       NewData = [],
       ProcTop = [fake_erl_top_msg(T1)]
   end,
+  FunctionTop = process_aggregate(NewData, State#state.sample_size),
   %% Calculate timer interval. Sleep at least half a second between
   %% samples when sysmon is running very slow:
   T2 = os:system_time(),
@@ -310,47 +314,29 @@ divide(A, B) ->
   A / B.
 
 %%------------------------------------------------------------------------------
-%% @doc Return if it's safe to collect process dictionary
-%%------------------------------------------------------------------------------
--spec maybe_dictionary() -> [atom()].
-maybe_dictionary() ->
-  case application:get_env(?APP, collect_process_dictionary) of
-    {ok, true} -> [dictionary];
-    _          -> []
-  end.
-
-%%------------------------------------------------------------------------------
 %% @doc Produce an aggregate summary of initial call and current function for
 %%      processes.
 %%------------------------------------------------------------------------------
--spec process_aggregate([pid()], non_neg_integer()) -> function_top().
-process_aggregate(Pids0, SampleSize) ->
-  Pids = random_sample(Pids0, SampleSize),
-  NumProcs = length(Pids),
+-spec process_aggregate([#pid_info{}], non_neg_integer()) -> function_top().
+process_aggregate(ProcInfos0, SampleSize) ->
+  ProcInfos = random_sample(ProcInfos0, SampleSize),
+  NumProcs = length(ProcInfos),
   InitCallT = ets:new(sysmon_init_call, []),
   CurrFunT = ets:new(sysmon_curr_fun, []),
-  ProcessAggregateFields = [current_function, initial_call] ++
-                           maybe_dictionary(),
-  Fun = fun(Pid) ->
-            case process_info(Pid, ProcessAggregateFields) of
-              undefined ->
-                ok;
-              [{current_function, CurrFun0} | Rest] ->
-                InitCall = initial_call(Rest),
-                ets:update_counter(InitCallT, InitCall, {2, 1}, {InitCall, 0}),
-                CurrFun =
-                  case CurrFun0 of
-                    %% process_info/2 may return 'undefined' in some
-                    %% cases (e.g.  native compiled (HiPE)
-                    %% modules). We collect all of these under
-                    %% {undefined, undefined, 0}.
-                    undefined -> {undefined, undefined, 0};
-                    _         -> CurrFun0
-                  end,
-                ets:update_counter(CurrFunT, CurrFun, {2, 1}, {CurrFun, 0})
-            end
+  Fun = fun(#pid_info{initial_call = InitCall, current_function = CurrFun0}) ->
+            ets:update_counter(InitCallT, InitCall, {2, 1}, {InitCall, 0}),
+            CurrFun =
+              case CurrFun0 of
+                %% process_info/2 may return 'undefined' in some
+                %% cases (e.g.  native compiled (HiPE)
+                %% modules). We collect all of these under
+                %% {undefined, undefined, 0}.
+                undefined -> {undefined, undefined, 0};
+                _         -> CurrFun0
+              end,
+            ets:update_counter(CurrFunT, CurrFun, {2, 1}, {CurrFun, 0})
         end,
-  lists:foreach(Fun, Pids),
+  lists:foreach(Fun, ProcInfos),
   Finalize = fun(A) ->
                  Sorted = lists:reverse(lists:keysort(2, ets:tab2list(A))),
                  lists:map(fun({Key, Val}) -> {Key, Val/NumProcs} end, Sorted)
@@ -405,16 +391,15 @@ do_proc_top(Deltas, State, Now) ->
   [finalize_proc_info(P, Now) || P <- TopElems].
 
 -spec finalize_proc_info(#pid_info{}, integer()) -> #erl_top{}.
-finalize_proc_info(#pid_info{pid = Pid, group_leader = GL} = ProcInfo, Now) ->
-  ProcessInfo = process_info(Pid, ?ADDITIONAL_FIELDS ++ maybe_dictionary()),
+finalize_proc_info(#pid_info{pid = Pid, initial_call = InitialCall,
+                             registered_name = Name,
+                             group_leader = GL} = ProcInfo, Now) ->
+  ProcessInfo = process_info(Pid, ?ADDITIONAL_FIELDS),
   case ProcessInfo of
-    [{initial_call, _IC},
-     {registered_name, Name},
-     {stack_size, Stack},
+    [{stack_size, Stack},
      {heap_size, Heap},
      {total_heap_size, Total},
-     {current_stacktrace, Stacktrace}
-     | _] ->
+     {current_stacktrace, Stacktrace}] ->
       CurrentFunction =
         case Stacktrace of
           [] ->
@@ -431,7 +416,7 @@ finalize_proc_info(#pid_info{pid = Pid, group_leader = GL} = ProcInfo, Now) ->
                reductions = ProcInfo#pid_info.reductions,
                memory = ProcInfo#pid_info.memory,
                message_queue_len = ProcInfo#pid_info.message_queue_len,
-               initial_call = initial_call(ProcessInfo),
+               initial_call = InitialCall,
                registered_name = Name,
                stack_size = Stack,
                heap_size = Heap,
@@ -494,77 +479,87 @@ gb_insert(Key, Val, Tree) ->
       gb_trees:update(Key, [Val|Vals], Tree)
   end.
 
--spec get_process_info([pid()], non_neg_integer(), integer()) ->
-        {ok, [#pid_info{}]} | error.
-get_process_info(Pids0, NumPids, MaxProcs) ->
-  case MaxProcs < NumPids andalso MaxProcs > 0 of
-    true ->
-      error;
-    false ->
-      Pids = lists:sort(Pids0),
-      Result = lists:foldr(
-                 fun(Pid, Acc) ->
-                     case pid_info(Pid) of
-                       undefined ->
-                         Acc;
-                       Val ->
-                         [Val|Acc]
-                     end
-                 end,
-                 [],
-                 Pids),
-      {ok, Result}
+-spec should_calculate_info(non_neg_integer(), integer()) -> boolean().
+should_calculate_info(NumPids, MaxProcs) ->
+  not (MaxProcs < NumPids andalso MaxProcs > 0).
+
+pid_info_update(PI) ->
+  #pid_info{pid = Pid} = PI,
+  case erlang:process_info(Pid, ?PROCESS_INFO_FIELDS_UPDATE) of
+    [ {reductions, Red}, {memory, Mem}, {message_queue_len, MQ}, {current_function, CF} ] ->
+      PI#pid_info{
+        reductions = Red,
+        memory = Mem,
+        message_queue_len = MQ,
+        current_function = CF
+       };
+    undefined ->
+      undefined
   end.
 
--spec pid_info(pid()) -> #pid_info{} | undefined.
-pid_info(Pid) ->
-  case erlang:process_info(Pid, ?PROCESS_INFO_FIELDS) of
-    [ {group_leader, GL}
+-spec pid_info_new(pid()) -> #pid_info{} | undefined.
+pid_info_new(Pid) ->
+  case erlang:process_info(Pid, ?PROCESS_INFO_FIELDS_NEW) of
+    [ {initial_call, _} = InitialCallProp
+    , {dictionary, _} = DictProp
+    , {registered_name, RegisteredName}
+    , {group_leader, GL}
     , {reductions, Red}
     , {memory, Mem}
     , {message_queue_len, MQ}
+    , {current_function, CF}
     ] ->
-      #pid_info
-        { pid               = Pid
-        , group_leader      = GL
-        , reductions        = Red
-        , memory            = Mem
-        , message_queue_len = MQ
+      #pid_info{
+         pid = Pid,
+         initial_call = initial_call([InitialCallProp,DictProp]),
+         registered_name = RegisteredName,
+         group_leader = GL,
+         reductions = Red,
+         memory = Mem,
+         message_queue_len = MQ,
+         current_function = CF
         };
     undefined ->
       %% The proces has died while we were collecting other data...
       undefined
   end.
 
--spec calc_deltas(PIL, PIL, PIL, number()) -> PIL
+calc_deltas(OldData, Pids, Dt) ->
+  NewData = calc_deltas(OldData, Pids, [], Dt),
+  lists:filter(
+    fun(undefined) -> false;
+       (#pid_info{}) -> true
+    end,
+    NewData).
+
+-spec calc_deltas(PIL, [pid()], PIL, number()) -> PIL
   when PIL :: [#pid_info{}].
 calc_deltas([], New, Acc, Dt) ->
   %% The rest of the processess are new
-  [delta(undefined, PI, Dt) || PI <- New] ++ Acc;
+  [delta(undefined, pid_info_new(Pid), Dt) || Pid <- New] ++ Acc;
 calc_deltas(_Old, [], Acc, _) ->
   %% The rest of the processes have terminated
   Acc;
-calc_deltas(Old, New, Acc, Dt) ->
+calc_deltas(Old, Pids, Acc, Dt) ->
   [PI1 = #pid_info{pid = P1} | OldT] = Old,
-  [PI2 = #pid_info{pid = P2} | NewT] = New,
+  [P2 | PidsT] = Pids,
   if P1 > P2 -> %% P1 has terminated
-      calc_deltas(OldT, New, Acc, Dt);
+      calc_deltas(OldT, Pids, Acc, Dt);
      P1 < P2 -> %% P2 is a new process
-      Delta = delta(undefined, PI2, Dt),
-      calc_deltas(Old, NewT, [Delta|Acc], Dt);
+      Delta = delta(undefined, pid_info_new(P2), Dt),
+      calc_deltas(Old, PidsT, [Delta|Acc], Dt);
      P1 =:= P2 -> %% We already have record of P2
-      Delta = delta(PI1, PI2, Dt),
-      calc_deltas(OldT, NewT, [Delta|Acc], Dt)
+      Delta = delta(PI1, pid_info_update(PI1), Dt),
+      calc_deltas(OldT, PidsT, [Delta|Acc], Dt)
   end.
 
 -spec top_to_list(top()) -> [#pid_info{}].
 top_to_list({_, Top}) ->
   lists:append(gb_trees:values(Top)).
 
--spec delta( #pid_info{} | undefined
-           , #pid_info{}
-           , number()
-           ) -> #pid_info{}.
+-spec delta(undefined, undefined, number()) -> undefined;
+           (#pid_info{} | undefined, #pid_info{}, number()) -> #pid_info{}.
+delta(undefined, undefined, _Dt) -> undefined;
 delta(P1, P2, Dt) ->
   case P1 of
     undefined ->
@@ -606,21 +601,13 @@ fake_erl_top_msg(Now) ->
           , total_heap_size    = -1
           }.
 
--spec random_sample(list(A), non_neg_integer()) -> [A].
+-spec random_sample(list(A), non_neg_integer()) -> list(A).
 %% Note: actual sample size may slightly differ from
 %% the SampleSize argument
+random_sample([], _SampleSize)  -> [];
 random_sample(L, SampleSize)  ->
   P = SampleSize/length(L),
-  lists:foldl(fun(I, Acc) ->
-                  case rand:uniform() < P of
-                    true ->
-                      [I|Acc];
-                    false ->
-                      Acc
-                  end
-              end,
-              [],
-              L).
+  lists:filter(fun(_I) -> rand:uniform() < P end, L).
 
 -spec initial_call(proplists:proplist()) -> mfa().
 initial_call(Info)  ->
