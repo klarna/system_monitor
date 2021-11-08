@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [2.2.0] - 2021-11-05
+
+Added support for configuring a module to use to send system_monitor events to
+an external destination.
+
 ## [2.1.0] - 2021-10-20
 
 Data format of system\_monitor\_top is changed to keep static data between
