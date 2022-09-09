@@ -549,8 +549,13 @@ calc_deltas(Old, Pids, Acc, Dt) ->
       Delta = delta(undefined, pid_info_new(P2), Dt),
       calc_deltas(Old, PidsT, [Delta|Acc], Dt);
      P1 =:= P2 -> %% We already have record of P2
-      Delta = delta(PI1, pid_info_update(PI1), Dt),
-      calc_deltas(OldT, PidsT, [Delta|Acc], Dt)
+      case pid_info_update(PI1) of
+        undefined -> % P1 just terminated
+          calc_deltas(OldT, PidsT, Acc, Dt);
+        PI2 ->
+          Delta = delta(PI1, PI2, Dt),
+          calc_deltas(OldT, PidsT, [Delta|Acc], Dt)
+      end
   end.
 
 -spec top_to_list(top()) -> [#pid_info{}].
