@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [2.2.1] - 2022-09-12
+
+Fixed a bug which could cause badrecord errors in system\_monitor\_top.
+
 ## [2.2.0] - 2021-11-05
 
 Added support for configuring a module to use to send system_monitor events to
