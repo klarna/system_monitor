@@ -71,5 +71,8 @@
     , {suspect_procs_max_memory, 524288000} %% 500 MB
     , {suspect_procs_max_message_queue_len, 5000}
     , {suspect_procs_max_total_heap_size, 524288000} %% 500 MB
+
+      %% Don't query memory if message_queue_len is longer than this:
+    , {mql_limit_for_memory, 100000}
     ]}
  ]}.
