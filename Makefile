@@ -2,7 +2,7 @@ PICS=$(patsubst %.uml,%.png,$(wildcard doc/*.uml))
 
 .PHONY: test
 test:
-	rebar3 do compile, dialyzer, eunit
+	rebar3 do compile, xref, dialyzer, eunit
 
 doc/%.png: doc/%.uml
 	plantuml -tsvg $<
