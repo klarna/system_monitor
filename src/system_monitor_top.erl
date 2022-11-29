@@ -485,17 +485,45 @@ should_calculate_info(NumPids, MaxProcs) ->
 
 pid_info_update(PI) ->
   #pid_info{pid = Pid} = PI,
-  case erlang:process_info(Pid, ?PROCESS_INFO_FIELDS_UPDATE) of
-    [ {reductions, Red}, {memory, Mem}, {message_queue_len, MQ}, {current_function, CF} ] ->
-      PI#pid_info{
-        reductions = Red,
-        memory = Mem,
-        message_queue_len = MQ,
-        current_function = CF
-       };
-    undefined ->
-      undefined
+  case should_not_update_memory(PI) of
+    true ->
+      %% Calling process_info(Pid, memory) can block both system_monitor and the
+      %% monitored Pid for a long time, which can degrade system performance.
+      %% If it seems dangerous to query memory, don't do that. The memory metric
+      %% must be present if Pid's sample is present, so we set it to zero.
+      case erlang:process_info(Pid, ?PROCESS_INFO_FIELDS_UPDATE -- [memory]) of
+        [ {reductions, Reds}
+        , {message_queue_len, MQL}
+        , {current_function, CurFun}
+        ] ->
+          pid_info_update(PI, Reds, _Mem = 0, MQL, CurFun);
+        undefined ->
+          undefined
+      end;
+    false ->
+      case erlang:process_info(Pid, ?PROCESS_INFO_FIELDS_UPDATE) of
+        [ {reductions, Reds}
+        , {memory, Mem}
+        , {message_queue_len, MQL}
+        , {current_function, CurFun}
+        ] ->
+          pid_info_update(PI, Reds, Mem, MQL, CurFun);
+        undefined ->
+          undefined
+      end
   end.
+
+pid_info_update(PI, Reds, Mem, MQL, CurFun) ->
+  PI#pid_info{
+    reductions = Reds
+  , memory = Mem
+  , message_queue_len = MQL
+  , current_function = CurFun
+  }.
+
+should_not_update_memory(PI) ->
+  %% this relies on number < atom in Erlang's term order
+  PI#pid_info.message_queue_len > application:get_env(?APP, mql_limit_for_memory, undefined).
 
 -spec pid_info_new(pid()) -> #pid_info{} | undefined.
 pid_info_new(Pid) ->
