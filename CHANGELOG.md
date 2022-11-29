@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [2.2.2] - 2022-11-29
+
 Do not query memory usage of processes that have huge message queues.
 
 ## [2.2.1] - 2022-09-12
