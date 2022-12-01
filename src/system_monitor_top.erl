@@ -564,10 +564,10 @@ calc_deltas(OldData, Pids, Dt) ->
   when PIL :: [#pid_info{}].
 calc_deltas([], New, Acc, Dt) ->
   %% The rest of the processess are new
-  [delta(undefined, pid_info_new(Pid), Dt) || Pid <- New] ++ Acc;
+  lists:sort([delta(undefined, pid_info_new(Pid), Dt) || Pid <- New] ++ Acc);
 calc_deltas(_Old, [], Acc, _) ->
   %% The rest of the processes have terminated
-  Acc;
+  lists:sort(Acc);
 calc_deltas(Old, Pids, Acc, Dt) ->
   [PI1 = #pid_info{pid = P1} | OldT] = Old,
   [P2 | PidsT] = Pids,
