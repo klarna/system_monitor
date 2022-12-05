@@ -135,6 +135,7 @@ handle_info(_Info, State) ->
 
 -spec terminate(term(), #state{}) -> any().
 terminate(_Reason, State) ->
+  system_monitor_callback:stop(),
   %% Possibly, one last check.
   [apply(?MODULE, Monitor, []) ||
     {Monitor, true, _TicksReset, _Ticks} <- State#state.monitors].
