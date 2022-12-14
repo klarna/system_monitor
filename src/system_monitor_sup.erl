@@ -19,7 +19,7 @@
 %-behaviour(supervisor3).
 
 %% External exports
--export([start_link/0, start_child/1]).
+-export([start_link/0, start_child/1, stop_child/1]).
 
 %% supervisor callbacks
 -export([init/1, post_init/1]).
@@ -38,6 +38,10 @@ start_link() ->
 
 start_child(Name) ->
     supervisor3:start_child(?SUP2, worker(Name)).
+
+stop_child(Name) ->
+    supervisor3:terminate_child(?SUP2, Name),
+    ok = supervisor3:delete_child(?SUP2, Name).
 
 %%%----------------------------------------------------------------------
 %%% Callback functions from supervisor

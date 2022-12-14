@@ -38,11 +38,11 @@
 
 %%%_* API =================================================================
 start() ->
-  {ok, _} = system_monitor_sup:start_child(?MODULE),
+  {ok, _} = system_monitor_sup:start_child(?SERVER),
   ok.
 
 stop() ->
-  gen_server:stop(?SERVER).
+  system_monitor_sup:stop_child(?SERVER).
 
 produce(Type, Events) ->
   gen_server:cast(?SERVER, {produce, Type, Events}).
