@@ -44,7 +44,6 @@
 
 %% gen_server callbacks
 -export([ init/1
-        , handle_continue/2
         , handle_call/3
         , handle_cast/2
         , handle_info/2
@@ -96,14 +95,7 @@ reset() ->
 
 init([]) ->
   {ok, Timer} = timer:send_interval(?TICK_INTERVAL, {self(), tick}),
-  {ok, #state{monitors = init_monitors(), timer_ref = Timer}, {continue, start_callback}}.
-
-handle_continue(start_callback, State) ->
-  case system_monitor_callback:is_configured() of
-    true -> ok = system_monitor_callback:start();
-    false -> ok
-  end,
-  {noreply, State}.
+  {ok, #state{monitors = init_monitors(), timer_ref = Timer}}.
 
 handle_call(_Request, _From, State) ->
   {reply, {error, unknown_call}, State}.

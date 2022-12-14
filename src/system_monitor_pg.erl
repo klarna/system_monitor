@@ -27,7 +27,7 @@
         ]).
 
 -behaviour(system_monitor_callback).
--export([ start/0, stop/0, produce/2 ]).
+-export([ produce/2 ]).
 
 -include_lib("system_monitor/include/system_monitor.hrl").
 -include_lib("hut/include/hut.hrl").
@@ -37,13 +37,6 @@
 -define(ONE_HOUR, 60*60*1000).
 
 %%%_* API =================================================================
-start() ->
-  {ok, _} = system_monitor_sup:start_child(?MODULE),
-  ok.
-
-stop() ->
-  gen_server:stop(?SERVER).
-
 produce(Type, Events) ->
   gen_server:cast(?SERVER, {produce, Type, Events}).
 

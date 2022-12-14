@@ -19,7 +19,7 @@
 %-behaviour(supervisor3).
 
 %% External exports
--export([start_link/0, start_child/1]).
+-export([start_link/0]).
 
 %% supervisor callbacks
 -export([init/1, post_init/1]).
@@ -35,9 +35,6 @@
 %%%----------------------------------------------------------------------
 start_link() ->
     supervisor3:start_link({local, ?SERVER}, ?MODULE, ?SERVER).
-
-start_child(Name) ->
-    supervisor3:start_child(?SUP2, worker(Name)).
 
 %%%----------------------------------------------------------------------
 %%% Callback functions from supervisor
@@ -75,5 +72,11 @@ init(?SUP2) ->
           [ worker(system_monitor_top)
           , worker(system_monitor_events)
           , worker(system_monitor)
-          ]
+          ] ++ producer_callback()
          }}.
+
+producer_callback() ->
+    case system_monitor_callback:get_callback_mod() of
+      undefined -> [];
+      Mod -> [worker(Mod)]
+    end.
