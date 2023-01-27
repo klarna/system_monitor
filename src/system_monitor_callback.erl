@@ -20,12 +20,11 @@
         , stop/0
         , produce/2
         , is_configured/0
+        , get_callback_mod/0
         ]).
 
 -include_lib("system_monitor/include/system_monitor.hrl").
 
--callback start() -> ok.
--callback stop() -> ok.
 -callback produce(atom(), list()) -> ok.
 
 start() ->
