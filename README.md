@@ -55,6 +55,13 @@ to the release apps. Add the following lines to `rebar.config`:
  ]}.
 ```
 
+To enable export to Postgres:
+
+```erlang
+application:load(system_monitor),
+application:set_env(system_monitor, callback_mod, system_monitor_pg)
+```
+
 ### Custom node status
 
 `system_monitor` can export arbitrary node status information that is
@@ -114,7 +121,7 @@ System_monitor will spawn several processes that handle different states:
 
 `system_monitor_pg` allows for Postgres being temporary down by storing the stats in its own internal buffer.
 This buffer is built with a sliding window that will stop the state from growing too big whenever
-Postgres is down for too long. On top of this `system_monitor_pg` has a built-in load 
+Postgres is down for too long. On top of this `system_monitor_pg` has a built-in load
 shedding mechanism that protects itself once the message length queue grows bigger than a certain level.
 
 ## Local development
