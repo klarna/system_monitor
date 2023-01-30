@@ -122,7 +122,14 @@ buffer_to_list({_, Buffer}) ->
 run_query(Conn, Type, Events) ->
   {ok, Statement} = epgsql:parse(Conn, query(Type)),
   Batch = [{Statement, params(Type, I)} || I <- Events],
-  _Result = epgsql:execute_batch(Conn, Batch).
+  Results = epgsql:execute_batch(Conn, Batch),
+  %% Crash on failure
+  lists:foreach(fun ({ok, _}) ->
+                      ok;
+                    ({ok, _, _}) ->
+                      ok
+                end,
+                Results).
 
 initialize() ->
   case connect() of
