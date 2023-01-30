@@ -64,7 +64,7 @@ handle_call(_Msg, _From, State) ->
 
 handle_info({'EXIT', Conn, _Reason}, #{connection := Conn} = State) ->
   timer:send_after(?FIVE_SECONDS, reinitialize),
-  {noreply, State};
+  {noreply, State#{connection => undefined}};
 handle_info({'EXIT', _Conn, _Reason}, #{connection := undefined} = State) ->
   timer:send_after(?FIVE_SECONDS, reinitialize),
   {noreply, State};
