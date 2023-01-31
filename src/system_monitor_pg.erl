@@ -64,7 +64,7 @@ handle_call(_Msg, _From, State) ->
 
 handle_info({'EXIT', Conn, _Reason}, #{connection := Conn} = State) ->
   timer:send_after(?FIVE_SECONDS, reinitialize),
-  {noreply, State};
+  {noreply, State#{connection => undefined}};
 handle_info({'EXIT', _Conn, _Reason}, #{connection := undefined} = State) ->
   timer:send_after(?FIVE_SECONDS, reinitialize),
   {noreply, State};
@@ -89,11 +89,7 @@ handle_cast({produce, Type, Events}, #{connection := Conn, buffer := Buffer} = S
       {noreply, State};
     _ ->
       lists:foreach(fun({Type0, Events0}) ->
-                      lists:foreach(fun(Event) ->
-                                      {ok, _} = epgsql:equery(Conn,
-                                                              query(Type0),
-                                                              params(Type0, Event))
-                                    end, Events0)
+                      run_query(Conn, Type0, Events0)
                     end, buffer_to_list(buffer_add(Buffer, {Type, Events}))),
       {noreply, State#{buffer => buffer_new()}}
   end.
@@ -123,6 +119,18 @@ buffer_to_list({_, Buffer}) ->
   queue:to_list(Buffer).
 
 %%%_* Internal functions ======================================================
+run_query(Conn, Type, Events) ->
+  {ok, Statement} = epgsql:parse(Conn, query(Type)),
+  Batch = [{Statement, params(Type, I)} || I <- Events],
+  Results = epgsql:execute_batch(Conn, Batch),
+  %% Crash on failure
+  lists:foreach(fun ({ok, _}) ->
+                      ok;
+                    ({ok, _, _}) ->
+                      ok
+                end,
+                Results).
+
 initialize() ->
   case connect() of
     undefined ->
