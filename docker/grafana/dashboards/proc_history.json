@@ -63,7 +63,7 @@
         {
           "alias": "",
           "format": "time_series",
-          "rawSql": "SELECT\n  $__time(ts),\n  dreductions\nFROM\n  prc\nWHERE\n  (ts BETWEEN $__timeFrom() AND $__timeTo()) AND node='[[node]]' AND (pid='[[pid]]' OR registered_name='[[regname]]')\nORDER BY ts\n",
+          "rawSql": "SELECT\n  $__time(ts),\n  dreductions\nFROM\n  prc\nWHERE\n  (ts BETWEEN $__timeFrom() AND $__timeTo()) AND \n  node='[[node]]' AND\n    ( ('[[pid]]'     != '' AND pid='[[pid]]') OR                  -- pid is set\n      ('[[regname]]' != '' AND registered_name='[[regname]]') OR  -- registered_name is set\n      ('[[pid]]'     =  '' AND '[[regname]]' = '')                -- none is set, show all processes\n    )\nORDER BY ts\n",
           "refId": "A"
         }
       ],
@@ -152,7 +152,7 @@
         {
           "alias": "",
           "format": "time_series",
-          "rawSql": "SELECT\n  $__time(ts),\n  stack_size, heap_size, total_heap_size, memory\nFROM\n  prc\nWHERE\n  (ts BETWEEN $__timeFrom() AND $__timeTo()) AND node='[[node]]' AND (pid='[[pid]]' OR registered_name='[[regname]]')\nORDER BY ts\n",
+          "rawSql": "SELECT\n  $__time(ts),\n  stack_size, heap_size, total_heap_size, memory\nFROM\n  prc\nWHERE\n (ts BETWEEN $__timeFrom() AND $__timeTo()) AND \n  node='[[node]]' AND\n    ( ('[[pid]]'     != '' AND pid='[[pid]]') OR                  -- pid is set\n      ('[[regname]]' != '' AND registered_name='[[regname]]') OR  -- registered_name is set\n      ('[[pid]]'     =  '' AND '[[regname]]' = '')                -- none is set, show all processes\n    ) \nORDER BY ts\n",
           "refId": "A"
         }
       ],
@@ -241,7 +241,7 @@
         {
           "alias": "",
           "format": "time_series",
-          "rawSql": "SELECT\n  $__time(ts), message_queue_len\nFROM prc\nWHERE  (ts BETWEEN $__timeFrom() AND $__timeTo()) AND node='[[node]]' AND (pid='[[pid]]' OR registered_name='[[regname]]')\nORDER BY ts",
+          "rawSql": "SELECT\n  $__time(ts), message_queue_len\nFROM prc\nWHERE\n  (ts BETWEEN $__timeFrom() AND $__timeTo()) AND \n  node='[[node]]' AND\n    ( ('[[pid]]'     != '' AND pid='[[pid]]') OR                  -- pid is set\n      ('[[regname]]' != '' AND registered_name='[[regname]]') OR  -- registered_name is set\n      ('[[pid]]'     =  '' AND '[[regname]]' = '')                -- none is set, show all processes\n    )\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -367,7 +367,7 @@
         {
           "alias": "",
           "format": "table",
-          "rawSql": "SELECT ts, current_function, current_stacktrace FROM prc \nWHERE (ts BETWEEN $__timeFrom() AND $__timeTo()) AND node='[[node]]' AND (pid='[[pid]]' OR registered_name='[[regname]]') AND current_function NOT SIMILAR TO 'gen_server:loop/%'\n",
+          "rawSql": "SELECT ts, registered_name, pid, current_function FROM prc \nWHERE \n  (ts BETWEEN $__timeFrom() AND $__timeTo()) AND \n  node='[[node]]' AND\n    ( ('[[pid]]'     != '' AND pid='[[pid]]') OR                  -- pid is set\n      ('[[regname]]' != '' AND registered_name='[[regname]]') OR  -- registered_name is set\n      ('[[pid]]'     =  '' AND '[[regname]]' = '')                -- none is set, show all processes\n    )\n",
           "refId": "A"
         }
       ],
