@@ -22,7 +22,7 @@
  , {registered,   []}
  , {modules,      []}
  , {mod,          {system_monitor_app, []}}
- , {applications, [kernel, stdlib, hut, supervisor3, epgsql]}
+ , {applications, [kernel, stdlib, supervisor3, epgsql]}
  , {env,
     [ %% Specifies how many topmost processes should be reported per
       %% category (such as `top_memory', `top_reductions', etc.)
