@@ -22,7 +22,7 @@
 -behaviour(gen_server).
 
 -include("system_monitor.hrl").
--include_lib("hut/include/hut.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 -export([start_link/0]).
 
@@ -60,8 +60,8 @@ handle_cast(_Msg, State) ->
 handle_info({monitor, PidOrPort, EventKind, Info}, State) ->
   ReferenceData = data_for_reference(PidOrPort),
   InfoTxt = format_system_event_info(Info),
-  ?log( info
-      , "sysmon type=~p reference=~p~n~s~n~s"
+  ?LOG_INFO(
+      "sysmon type=~p reference=~p~n~s~n~s"
       , [EventKind, PidOrPort, InfoTxt, ReferenceData]
       , #{domain => [system_monitor]}
       ),

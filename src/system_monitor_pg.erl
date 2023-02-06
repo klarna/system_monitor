@@ -30,7 +30,7 @@
 -export([ produce/2 ]).
 
 -include_lib("system_monitor/include/system_monitor.hrl").
--include_lib("hut/include/hut.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 -define(SERVER, ?MODULE).
 -define(FIVE_SECONDS, 5000).
@@ -159,7 +159,7 @@ connect_options() ->
     codecs => []}.
 
 log_failed_connection() ->
-  ?log(warning, "Failed to open connection to the DB.", [], #{domain => [system_monitor]}).
+  ?LOG_WARNING("Failed to open connection to the DB.", [], #{domain => [system_monitor]}).
 
 mk_partitions(Conn) ->
   DaysAhead = application:get_env(system_monitor, partition_days_ahead, 10),

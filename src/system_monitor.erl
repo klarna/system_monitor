@@ -24,8 +24,7 @@
 %%--------------------------------------------------------------------
 
 -include_lib("system_monitor/include/system_monitor.hrl").
-
--include_lib("hut/include/hut.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 %% API
 -export([start_link/0]).
@@ -49,8 +48,6 @@
         , handle_info/2
         , terminate/2
         ]).
-
--include_lib("hut/include/hut.hrl").
 
 -define(SERVER, ?MODULE).
 -define(TICK_INTERVAL, 1000).
@@ -181,8 +178,8 @@ check_process_count() ->
   {ok, MaxProcs} = application:get_env(?APP, top_max_procs),
   case erlang:system_info(process_count) of
     Count when Count > MaxProcs div 5 ->
-      ?log( warning
-          , "Abnormal process count (~p).~n"
+      ?LOG_WARNING(
+          "Abnormal process count (~p).~n"
           , [Count]
           , #{domain => [system_monitor]}
           );
@@ -221,7 +218,7 @@ is_suspect_proc(Proc, {MaxMemory, MaxMqLen, MaxTotalHeapSize}) ->
 log_suspect_proc(Proc) ->
   ErlTopStr = erl_top_to_str(Proc),
   Format = "Suspect Proc~n~s",
-  ?log(warning, Format, [ErlTopStr], #{domain => [system_monitor]}).
+  ?LOG_WARNING(Format, [ErlTopStr], #{domain => [system_monitor]}).
 
 %%------------------------------------------------------------------------------
 %% @doc Report top processes
