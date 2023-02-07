@@ -30,7 +30,9 @@ jobs:
         env:
           cache-name: rebar3
         with:
-          path: ~/.cache/rebar3
+          path: |
+            ~/.cache/rebar3
+            _build/**/*_plt
           key: ci-${{runner.os}}-${{env.cache-name}}-otp_${{matrix.otp}}-rebar_${{matrix.rebar3}}-${{hashFiles('rebar.lock')}}
           restore-keys: |
             ci-${{runner.os}}-${{env.cache-name}}-otp_${{matrix.otp}}-rebar_${{matrix.rebar3}}
