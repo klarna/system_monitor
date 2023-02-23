@@ -177,7 +177,7 @@ monitors() ->
 check_process_count() ->
   {ok, MaxProcs} = application:get_env(?APP, top_max_procs),
   case erlang:system_info(process_count) of
-    Count when Count > MaxProcs div 5 ->
+    Count when Count > MaxProcs ->
       ?LOG_WARNING(
           "Abnormal process count (~p).~n"
           , [Count]
