@@ -7,36 +7,27 @@ on:
     branches:
       - master
 jobs:
-  test:
-    runs-on: ubuntu-20.04
-    name: Erlang/OTP ${{matrix.otp}}
+  build:
     strategy:
       matrix:
-        otp:
-          - '25'
-          - '24'
-          - '23'
-        rebar3:
-          - '3'
+        platform: [ubuntu-latest]
+        otp-version: [23, 24, 25, 26]
+    runs-on: ${{ matrix.platform }}
+    container:
+      image: erlang:${{ matrix.otp-version }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: ${{matrix.otp}}
-          rebar3-version: ${{matrix.rebar3}}
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - name: Rebar3 cache
-        uses: actions/cache@v1
-        env:
-          cache-name: rebar3
+      - name: Cache Dialyzer PLTs
+        uses: actions/cache@v3
         with:
           path: |
-            ~/.cache/rebar3
+            ~/.cache/rebar3/rebar3_*_plt
             _build/**/*_plt
-          key: ci-${{runner.os}}-${{env.cache-name}}-otp_${{matrix.otp}}-rebar_${{matrix.rebar3}}-${{hashFiles('rebar.lock')}}
+          key: ${{ runner.os }}-otp${{ matrix.otp-version }}-dialyzer-${{ hashFiles('rebar.config') }}
           restore-keys: |
-            ci-${{runner.os}}-${{env.cache-name}}-otp_${{matrix.otp}}-rebar_${{matrix.rebar3}}
-            ci-${{runner.os}}-${{env.cache-name}}-otp_${{matrix.otp}}
+            ${{ runner.os }}-otp${{ matrix.otp-version }}-dialyzer-
 
       - name: Compile
         run: rebar3 do compile
