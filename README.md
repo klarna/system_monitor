@@ -6,10 +6,10 @@
 [![Developed at Klarna][klarna-image]][klarna-url]
 
 `system_monitor` is a BEAM VM monitoring and introspection application
-that helps troubleshooting live systems. It collects various
+that helps in troubleshooting live systems. It collects various
 information about Erlang processes and applications.
 Unlike `observer`, `system_monitor` does not require
-connecting to the monitored system via Erlang distribution protocol,
+connecting to the monitored system via the Erlang distribution protocol,
 and can be used to monitor systems with very tight access
 restrictions.
 
@@ -19,7 +19,7 @@ restrictions.
 
 Information about top N Erlang processes consuming the most resources
 (such as reductions or memory), or have the longest message queues, is
-presented on process top dashboard:
+presented on the process top dashboard:
 
 ![Process top](doc/proc_top.png)
 
@@ -100,11 +100,11 @@ More information about configurable options is found [here](src/system_monitor.a
 System_monitor will spawn several processes that handle different states:
 
 * `system_monitor_top`
-  Collects a certain amount of data from BEAM for a preconfigured number of processes
+  Collects a certain amount of data from the BEAM for a preconfigured number of processes
 * `system_monitor_events`
   Subscribes to certain types of preconfigured BEAM events such as: busy_port, long_gc, long_schedule etc
 * `system_monitor`
-  Runs periodically a set of preconfigured `monitors`
+  Runs a set of preconfigured `monitors` periodically
 
 ### What are the preconfigured monitors
 
@@ -144,7 +144,7 @@ See our [changelog](CHANGELOG.md).
 
 ## License
 
-Copyright © 2020 Klarna Bank AB
+Copyright © 2020-2023 Klarna Bank AB
 
 For license details, see the [LICENSE](LICENSE) file in the root of this project.
 
