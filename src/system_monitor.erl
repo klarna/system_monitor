@@ -39,6 +39,7 @@
         , stop_top/0
         , fmt_mfa/1
         , fmt_stack/1
+        , node_name/0
         ]).
 
 %% gen_server callbacks
@@ -245,8 +246,8 @@ report_full_status() ->
       _ ->
         <<>>
     end,
-  system_monitor_callback:produce(node_role,
-                                  [{node_role, node(), TS, iolist_to_binary(NodeReport)}]).
+  system_monitor_callback:produce(
+    node_role, [{node_role, node_name(), TS, iolist_to_binary(NodeReport)}]).
 
 %%------------------------------------------------------------------------------
 %% @doc Calculate reductions per application.
@@ -272,14 +273,16 @@ report_app_top(TS) ->
 present_results(Record, Tag, Values, TS) ->
   {ok, Thresholds} = application:get_env(?APP, top_significance_threshold),
   Threshold = maps:get(Tag, Thresholds, 0),
-  Node = node(),
   L = lists:filtermap(fun ({Key, Val}) when Val > Threshold ->
-                            {true, {Record, Node, TS, Key, Tag, Val}};
+                            {true, {Record, node_name(), TS, Key, Tag, Val}};
                           (_) ->
                             false
                       end,
                       Values),
   system_monitor_callback:produce(Record, L).
+
+node_name() ->
+    application:get_env(?APP, node_name, node()).
 
 %%--------------------------------------------------------------------
 %% @doc logs "the interesting parts" of erl_top

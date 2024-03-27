@@ -407,7 +407,7 @@ finalize_proc_info(#pid_info{pid = Pid, initial_call = InitialCall,
           [{CurrModule, CurrFun, CurrArity, _} | _] ->
             {CurrModule, CurrFun, CurrArity}
         end,
-      #erl_top{node = node(),
+      #erl_top{node = system_monitor:node_name(),
                ts = Now,
                pid = pid_to_list(ProcInfo#pid_info.pid),
                group_leader = pid_to_list(GL),
@@ -424,7 +424,7 @@ finalize_proc_info(#pid_info{pid = Pid, initial_call = InitialCall,
                current_stacktrace = Stacktrace,
                current_function = CurrentFunction};
     undefined ->
-      #erl_top{node = node(),
+      #erl_top{node = system_monitor:node_name(),
                ts = Now,
                pid = pid_to_list(ProcInfo#pid_info.pid),
                group_leader = pid_to_list(GL),
@@ -616,7 +616,7 @@ do_get_app_top(FieldId) ->
 
 -spec fake_erl_top_msg(integer()) -> #erl_top{}.
 fake_erl_top_msg(Now) ->
-  #erl_top{ node               = node()
+  #erl_top{ node               = system_monitor:node_name()
           , ts                 = Now
           , pid                = "<42.42.42>"
           , group_leader       = "<42.42.42>"
