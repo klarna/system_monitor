@@ -22,9 +22,14 @@
         , handle_call/3
         , handle_info/2
         , handle_cast/2
-        , format_status/2
+        , format_status/1
         , terminate/2
         ]).
+
+-if(?OTP_RELEASE < 27).
+-export([ format_status/2
+        ]).
+-endif.
 
 -behaviour(system_monitor_callback).
 -export([ produce/2 ]).
@@ -94,10 +99,18 @@ handle_cast({produce, Type, Events}, #{connection := Conn, buffer := Buffer} = S
       {noreply, State#{buffer => buffer_new()}}
   end.
 
+format_status(Status = #{reason := _Reason, state := State}) ->
+  Status#{state => State#{buffer => buffer_new()}};
+format_status(Status) ->
+  Status.
+
+-if(?OTP_RELEASE < 27).
+%% TODO: remove once OTP-25 is the oldest supported OTP version
 format_status(normal, [_PDict, State]) ->
   [{data, [{"State", State}]}];
 format_status(terminate, [_PDict, State]) ->
   State#{buffer => buffer_new()}.
+-endif.
 
 terminate(_Reason, #{connection := undefined}) ->
   ok;
