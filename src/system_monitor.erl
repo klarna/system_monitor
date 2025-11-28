@@ -124,10 +124,8 @@ handle_info(_Info, State) ->
   {noreply, State}.
 
 -spec terminate(term(), #state{}) -> any().
-terminate(_Reason, State) ->
-  %% Possibly, one last check.
-  [apply(?MODULE, Monitor, []) ||
-    {Monitor, true, _TicksReset, _Ticks} <- State#state.monitors].
+terminate(_Reason, _State) ->
+  ok.
 
 %%==============================================================================
 %% Internal functions
@@ -144,8 +142,7 @@ init_monitors() ->
 %%------------------------------------------------------------------------------
 %% @doc Returns the list of monitors. The format is
 %%      {FunctionName, RunMonitorAtTerminate, NumberOfTicks}.
-%%      RunMonitorAtTerminate determines whether the monitor is to be run in
-%%      the terminate gen_server callback.
+%%      RunMonitorAtTerminate is ignored.
 %%      ... and NumberOfTicks is the number of ticks between invocations of
 %%      the monitor in question. So, if NumberOfTicks is 3600, the monitor is
 %%      to be run once every hour, as there is a tick every second.
