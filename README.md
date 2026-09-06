@@ -93,6 +93,40 @@ environment:
    ]}
 ```
 
+### External monitoring
+
+Besides logging BEAM events, `system_monitor` can hand each event to a module
+of your own, so events can be forwarded to whatever the rest of your system
+already uses. The module must export `system_monitor_event/2`:
+
+```erlang
+-module(foo).
+
+-export([system_monitor_event/2]).
+
+system_monitor_event(EventKind, Info) ->
+  my_metrics:increment([sysmon, EventKind]),
+  ok.
+```
+
+It is then bound in the `system_monitor` application environment:
+
+```erlang
+{system_monitor,
+   [ {external_monitoring, foo}
+   ...
+   ]}
+```
+
+`EventKind` and `Info` are the third and fourth elements of the message
+described in [`erlang:system_monitor/2`][system-monitor-bif], so `Info` differs
+per event kind. The pid or port the event concerns is not passed to the
+callback; it is written to the log line. The callback runs in the
+`system_monitor_events` process, so it should be quick and it should not
+crash. `undefined`, the default, disables it.
+
+[system-monitor-bif]: https://www.erlang.org/doc/apps/erts/erlang.html#system_monitor/2
+
 More information about configurable options is found [here](src/system_monitor.app.src).
 
 ## How it all works out

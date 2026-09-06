@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - yyyy-mm-dd
 
+Document the `external_monitoring` callback in `system_monitor.app.src` and the
+README, and let it be disabled with `undefined` the way the other optional
+callbacks are. Setting it to `undefined` previously crashed
+`system_monitor_events` once per BEAM event.
+
 ## [2.3.1] - 2025-11-28
 
 Codify the status quo that monitors are not run at terminate.
