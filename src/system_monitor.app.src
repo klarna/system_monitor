@@ -68,6 +68,14 @@
        , {long_gc, 500}
        , {long_schedule, 500}
        ]}
+
+      %% Optional module that is notified of every BEAM event, in
+      %% addition to the log. It must export `system_monitor_event/2',
+      %% which is called as `Mod:system_monitor_event(EventKind, Info)'
+      %% with the third and fourth elements of the message described in
+      %% `erlang:system_monitor/2'. `undefined' disables it:
+    , {external_monitoring, undefined}
+
     , {suspect_procs_max_memory, 524288000} %% 500 MB
     , {suspect_procs_max_message_queue_len, 5000}
     , {suspect_procs_max_total_heap_size, 524288000} %% 500 MB

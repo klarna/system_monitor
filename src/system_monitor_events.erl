@@ -65,9 +65,9 @@ handle_info({monitor, PidOrPort, EventKind, Info}, State) ->
       , [EventKind, PidOrPort, InfoTxt, ReferenceData]
       , #{domain => [system_monitor]}
       ),
-  case application:get_env(?APP, external_monitoring) of
-    {ok, Mod} -> Mod:system_monitor_event(EventKind, Info);
-    undefined -> ok
+  case application:get_env(?APP, external_monitoring, undefined) of
+    undefined -> ok;
+    Mod -> Mod:system_monitor_event(EventKind, Info)
   end,
   {noreply, State};
 handle_info(_Info, State) ->
